@@ -91,9 +91,28 @@ input,select,textarea {
 .helper-list li { margin: 6px 0; }
 .lego-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 16px; }
 .chip {
-  display: grid; grid-template-columns: 1fr auto; gap: 6px;
+  display: grid; grid-template-columns: 1fr auto auto; gap: 6px;
   background: #f8fbff; border: 1px solid var(--border); border-radius: 12px;
   padding: 8px; margin-bottom: 8px;
+}
+.question-fields {
+  display: grid;
+  gap: 6px;
+}
+.drag-handle {
+  align-self: center;
+  color: #6a7da4;
+  cursor: grab;
+  user-select: none;
+  font-size: 1rem;
+  padding: 0 4px;
+}
+.chip.is-dragging {
+  opacity: 0.55;
+}
+.chip.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(93, 155, 255, 0.2) inset;
 }
 .chip button { background: transparent; color: var(--danger); border: 0; cursor: pointer; }
 .rules-table-wrapper { overflow: auto; }
