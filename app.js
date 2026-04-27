@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -111,12 +111,21 @@ function saveConfig() {
 
 function ensureRanges() {
   for (const project of state.projectTypes) {
+    ensureQuestionKeys(project);
     project.ranges ||= {};
     for (const stage of project.stages) {
       project.ranges[stage.id] ||= {};
       for (const participant of project.participants) {
         project.ranges[stage.id][participant.id] ||= { min: 0, max: 0, note: "" };
       }
+    }
+  }
+}
+
+function ensureQuestionKeys(project) {
+  for (const question of project.questions || []) {
+    if (!question.key) {
+      question.key = `q_${(question.id || crypto.randomUUID()).replace(/-/g, "").slice(0, 8)}`;
     }
   }
 }
@@ -276,45 +285,52 @@ function renderAdmin() {
     node.querySelector(".project-description").value = project.description || "";
 
     const stagesList = node.querySelector(".stages-list");
-    project.stages.forEach((s) => stagesList.appendChild(renderChip(s.label, () => {
+    project.stages.forEach((s, index) => stagesList.appendChild(renderChip(s.label, () => {
       project.stages = project.stages.filter((x) => x.id !== s.id);
       delete project.ranges[s.id];
       saveConfig(); refresh();
     }, (v) => {
       s.label = v; saveConfig(); renderQuestionnaire();
-    })));
+    }, index, "Déplacer étape")));
+    attachDragAndDropReorder(stagesList, project.stages, () => {
+      saveConfig(); refresh();
+    });
 
     const participantsList = node.querySelector(".participants-list");
-    project.participants.forEach((p) => participantsList.appendChild(renderChip(p.label, () => {
+    project.participants.forEach((p, index) => participantsList.appendChild(renderChip(p.label, () => {
       project.participants = project.participants.filter((x) => x.id !== p.id);
       for (const stageId of Object.keys(project.ranges || {})) delete project.ranges[stageId][p.id];
       saveConfig(); refresh();
     }, (v) => {
       p.label = v; saveConfig();
-    })));
+    }, index, "Déplacer participant")));
+    attachDragAndDropReorder(participantsList, project.participants, () => {
+      saveConfig(); refresh();
+    });
 
     const questionsList = node.querySelector(".questions-list");
-    project.questions.forEach((q) => {
+    project.questions.forEach((q, index) => {
       const wrapper = document.createElement("div");
       wrapper.className = "chip";
+      wrapper.dataset.draggableIndex = String(index);
+      wrapper.draggable = true;
       wrapper.innerHTML = `
-        <div>
+        <div class="question-fields">
           <input value="${q.label}" />
           <select>
             <option value="number" ${q.type === "number" ? "selected" : ""}>Nombre</option>
             <option value="select" ${q.type === "select" ? "selected" : ""}>Choix</option>
           </select>
-          <input value="${q.key}" placeholder="clé" />
-          <input value="${(q.options || []).join("|")}" placeholder="Options séparées par |" />
+          <input value="${(q.options || []).join("; ")}" placeholder="Options séparées par ;" />
         </div>
+        <span class="drag-handle" title="Glisser-déposer pour réordonner">↕</span>
         <button title="Supprimer">✕</button>
       `;
-      const [labelInput, typeInput, keyInput, optionsInput] = wrapper.querySelectorAll("input,select");
+      const [labelInput, typeInput, optionsInput] = wrapper.querySelectorAll("input,select");
       labelInput.addEventListener("input", () => { q.label = labelInput.value; saveConfig(); renderQuestionnaire(); });
       typeInput.addEventListener("change", () => { q.type = typeInput.value; saveConfig(); renderQuestionnaire(); });
-      keyInput.addEventListener("input", () => { q.key = keyInput.value; saveConfig(); renderQuestionnaire(); });
       optionsInput.addEventListener("input", () => {
-        q.options = optionsInput.value.split("|").map((x) => x.trim()).filter(Boolean);
+        q.options = optionsInput.value.split(";").map((x) => x.trim()).filter(Boolean);
         saveConfig(); renderQuestionnaire();
       });
       wrapper.querySelector("button").addEventListener("click", () => {
@@ -322,6 +338,9 @@ function renderAdmin() {
         saveConfig(); refresh();
       });
       questionsList.appendChild(wrapper);
+    });
+    attachDragAndDropReorder(questionsList, project.questions, () => {
+      saveConfig(); refresh();
     });
 
     node.querySelector(".add-stage").addEventListener("click", () => {
@@ -391,17 +410,53 @@ function renderRulesTable(node, project) {
   }
 }
 
-function renderChip(value, onDelete, onEdit) {
+function renderChip(value, onDelete, onEdit, index, dragLabel) {
   const div = document.createElement("div");
   div.className = "chip";
+  div.dataset.draggableIndex = String(index);
+  div.draggable = true;
   const input = document.createElement("input");
   input.value = value;
   input.addEventListener("input", () => onEdit(input.value));
+  const handle = document.createElement("span");
+  handle.className = "drag-handle";
+  handle.title = `${dragLabel} (glisser-déposer)`;
+  handle.textContent = "↕";
   const btn = document.createElement("button");
   btn.textContent = "✕";
   btn.addEventListener("click", onDelete);
-  div.append(input, btn);
+  div.append(input, handle, btn);
   return div;
+}
+
+function attachDragAndDropReorder(container, list, onReorder) {
+  let draggedIndex = null;
+  container.querySelectorAll("[data-draggable-index]").forEach((item) => {
+    const getIndex = () => Number(item.dataset.draggableIndex);
+    item.addEventListener("dragstart", () => {
+      draggedIndex = getIndex();
+      item.classList.add("is-dragging");
+    });
+    item.addEventListener("dragend", () => {
+      draggedIndex = null;
+      item.classList.remove("is-dragging");
+      container.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
+    });
+    item.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      item.classList.add("drag-over");
+    });
+    item.addEventListener("dragleave", () => item.classList.remove("drag-over"));
+    item.addEventListener("drop", (e) => {
+      e.preventDefault();
+      item.classList.remove("drag-over");
+      const targetIndex = getIndex();
+      if (draggedIndex === null || targetIndex === draggedIndex) return;
+      const [moved] = list.splice(draggedIndex, 1);
+      list.splice(targetIndex, 0, moved);
+      onReorder();
+    });
+  });
 }
 
 els.projectSelect.addEventListener("change", renderQuestionnaire);
