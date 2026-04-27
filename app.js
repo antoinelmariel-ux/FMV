@@ -1,7 +1,8 @@
 const STORAGE_KEY = "fmv-local-config-v1";
+const APP_VERSION = "1.1.0";
 
 const defaultConfig = {
-  version: "1.0.0",
+  version: APP_VERSION,
   projectTypes: [
     {
       id: crypto.randomUUID(),
@@ -55,6 +56,10 @@ const defaultConfig = {
 };
 
 let state = loadConfig();
+if (state.version !== APP_VERSION) {
+  state.version = APP_VERSION;
+  saveConfig();
+}
 ensureRanges();
 
 const els = {
@@ -105,7 +110,7 @@ function refresh() {
   renderProjectSelect();
   renderQuestionnaire();
   renderAdmin();
-  els.versionBadge.textContent = `Version v${state.version || "1.0.0"}`;
+  els.versionBadge.textContent = `Version v${state.version || APP_VERSION}`;
 }
 
 els.tabs.forEach((tab) => {
