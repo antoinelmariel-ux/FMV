@@ -120,6 +120,26 @@ input,select,textarea {
 .rules-table th, .rules-table td {
   border: 1px solid var(--border); padding: 8px; vertical-align: top;
 }
+.modifiers-editor {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+.modifiers-list {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 12px;
+}
+.modifier-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  align-items: end;
+  background: #f8fbff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
 .report-empty { color: var(--muted); }
 .report-grid { display: grid; gap: 10px; }
 .report-grid table { width: 100%; border-collapse: collapse; }

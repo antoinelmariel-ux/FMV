@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -375,8 +375,145 @@ function renderAdmin() {
     });
 
     renderRulesTable(node, project);
+    renderModifiersEditor(node, project);
     els.adminProjects.appendChild(node);
   });
+}
+
+function renderModifiersEditor(node, project) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "modifiers-editor";
+  wrapper.innerHTML = `
+    <h3>Adaptation des fourchettes via les réponses</h3>
+    <p class="muted">Configurez ici comment chaque réponse ajuste les heures min/max (globalement ou par étape).</p>
+    <div class="modifiers-list"></div>
+    <button class="btn small add-modifier">+ Règle d'adaptation</button>
+  `;
+  const listNode = wrapper.querySelector(".modifiers-list");
+
+  const questionOptions = (project.questions || [])
+    .map((q) => `<option value="${q.key}">${q.label}</option>`)
+    .join("");
+  const stageOptions = (project.stages || [])
+    .map((s) => `<option value="${s.id}">${s.label}</option>`)
+    .join("");
+
+  (project.modifiers || []).forEach((mod) => {
+    const row = document.createElement("div");
+    row.className = "modifier-row";
+    row.innerHTML = `
+      <label>Question
+        <select data-k="questionKey">${questionOptions}</select>
+      </label>
+      <label>Condition
+        <select data-k="operator">
+          <option value="=" ${mod.operator !== ">" ? "selected" : ""}>Égale à</option>
+          <option value=">" ${mod.operator === ">" ? "selected" : ""}>Supérieure à</option>
+        </select>
+      </label>
+      <label>Valeur attendue
+        <input data-k="expectedValue" value="${mod.expectedValue ?? ""}" />
+      </label>
+      <label>Portée
+        <select data-k="scope">
+          <option value="global" ${mod.scope !== "stage" ? "selected" : ""}>Globale</option>
+          <option value="stage" ${mod.scope === "stage" ? "selected" : ""}>Étape</option>
+        </select>
+      </label>
+      <label>Effet
+        <select data-k="effect">
+          <option value="multiply" ${(mod.effect || "multiply") === "multiply" ? "selected" : ""}>Multiplier min/max</option>
+          <option value="excludeStage" ${(mod.effect || "multiply") === "excludeStage" ? "selected" : ""}>Retirer l'étape</option>
+        </select>
+      </label>
+      <label class="multiplier-field">Coefficient
+        <input type="number" step="0.05" min="0" data-k="multiplier" value="${mod.multiplier ?? 1}" />
+      </label>
+      <label class="stage-field">Étape cible
+        <select data-k="stageId">
+          <option value="">Choisir une étape</option>
+          ${stageOptions}
+        </select>
+      </label>
+      <label>Note visible côté utilisateur
+        <input data-k="note" value="${mod.note || ""}" />
+      </label>
+      <button class="btn danger delete-modifier">Supprimer</button>
+    `;
+
+    const controls = row.querySelectorAll("[data-k]");
+    const qSelect = row.querySelector('[data-k="questionKey"]');
+    const opSelect = row.querySelector('[data-k="operator"]');
+    const expectedInput = row.querySelector('[data-k="expectedValue"]');
+    const scopeSelect = row.querySelector('[data-k="scope"]');
+    const effectSelect = row.querySelector('[data-k="effect"]');
+    const multiplierInput = row.querySelector('[data-k="multiplier"]');
+    const stageSelect = row.querySelector('[data-k="stageId"]');
+    const multiplierField = row.querySelector(".multiplier-field");
+    const stageField = row.querySelector(".stage-field");
+
+    qSelect.value = mod.questionKey || project.questions?.[0]?.key || "";
+    opSelect.value = mod.operator === ">" ? ">" : "=";
+    scopeSelect.value = mod.scope === "stage" ? "stage" : "global";
+    effectSelect.value = mod.effect || "multiply";
+    stageSelect.value = mod.stageId || project.stages?.find((s) => s.label === mod.stageRef)?.id || "";
+
+    const syncUi = () => {
+      const isStageScope = scopeSelect.value === "stage";
+      const isExclude = effectSelect.value === "excludeStage";
+      stageField.style.display = isStageScope ? "grid" : "none";
+      multiplierField.style.display = isExclude ? "none" : "grid";
+    };
+
+    const normalizeAndSave = () => {
+      mod.questionKey = qSelect.value;
+      mod.operator = opSelect.value;
+      const questionType = project.questions?.find((q) => q.key === mod.questionKey)?.type;
+      mod.expectedValue = questionType === "number" ? Number(expectedInput.value || 0) : expectedInput.value;
+      mod.scope = scopeSelect.value;
+      mod.effect = effectSelect.value;
+      mod.multiplier = Number(multiplierInput.value || 1);
+      mod.stageId = stageSelect.value || undefined;
+      mod.note = row.querySelector('[data-k="note"]').value;
+      saveConfig();
+    };
+
+    controls.forEach((ctrl) => ctrl.addEventListener("input", normalizeAndSave));
+    controls.forEach((ctrl) => ctrl.addEventListener("change", () => {
+      syncUi();
+      normalizeAndSave();
+    }));
+
+    row.querySelector(".delete-modifier").addEventListener("click", () => {
+      project.modifiers = project.modifiers.filter((x) => x.id !== mod.id);
+      saveConfig();
+      refresh();
+    });
+
+    syncUi();
+    listNode.appendChild(row);
+  });
+
+  wrapper.querySelector(".add-modifier").addEventListener("click", () => {
+    const firstQuestion = project.questions?.[0];
+    const firstStage = project.stages?.[0];
+    project.modifiers ||= [];
+    project.modifiers.push({
+      id: crypto.randomUUID(),
+      questionKey: firstQuestion?.key || "",
+      operator: firstQuestion?.type === "number" ? ">" : "=",
+      expectedValue: firstQuestion?.type === "number" ? 0 : (firstQuestion?.options?.[0] || ""),
+      scope: "global",
+      effect: "multiply",
+      multiplier: 1.1,
+      stageId: firstStage?.id,
+      note: "Ajustement personnalisé"
+    });
+    saveConfig();
+    refresh();
+  });
+
+  node.appendChild(wrapper);
 }
 
 function renderRulesTable(node, project) {
