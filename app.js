@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.6.0";
 let undoSnapshot = null;
 
 const defaultConfig = {
@@ -249,6 +249,8 @@ function computeRecommendation() {
         const stageState = stageEffects.get(stageId);
         if (effect === "excludeStage") {
           stageState.excluded = true;
+        } else if (effect === "commentStage") {
+          // commentaire uniquement, sans impact horaire
         } else {
           stageState.multiplier *= Number(mod.multiplier || 1);
         }
@@ -363,18 +365,29 @@ function renderAdmin() {
             <option value="number" ${q.type === "number" ? "selected" : ""}>Nombre</option>
             <option value="select" ${q.type === "select" ? "selected" : ""}>Choix</option>
           </select>
-          <input value="${(q.options || []).join("; ")}" placeholder="Options séparées par ;" />
+          <input class="question-options-input" value="${(q.options || []).join("; ")}" placeholder="Options séparées par ;" />
         </div>
         <span class="drag-handle" title="Glisser-déposer pour réordonner">↕</span>
         <button title="Supprimer">✕</button>
       `;
       const [labelInput, typeInput, optionsInput] = wrapper.querySelectorAll("input,select");
+      const toggleOptionsInput = () => {
+        const isNumber = typeInput.value === "number";
+        optionsInput.style.display = isNumber ? "none" : "block";
+      };
       labelInput.addEventListener("input", () => { q.label = labelInput.value; saveConfig(); renderQuestionnaire(); });
-      typeInput.addEventListener("change", () => { q.type = typeInput.value; saveConfig(); renderQuestionnaire(); });
+      typeInput.addEventListener("change", () => {
+        q.type = typeInput.value;
+        if (q.type === "number") q.options = [];
+        toggleOptionsInput();
+        saveConfig();
+        renderQuestionnaire();
+      });
       optionsInput.addEventListener("input", () => {
         q.options = optionsInput.value.split(";").map((x) => x.trim()).filter(Boolean);
         saveConfig(); renderQuestionnaire();
       });
+      toggleOptionsInput();
       wrapper.querySelector("button").addEventListener("click", () => {
         project.questions = project.questions.filter((x) => x.id !== q.id);
         saveConfig(); refresh();
@@ -512,6 +525,7 @@ function renderModifiersEditor(node, project) {
         <select data-k="effect">
           <option value="multiply" ${(mod.effect || "multiply") === "multiply" ? "selected" : ""}>Multiplier min/max</option>
           <option value="excludeStage" ${(mod.effect || "multiply") === "excludeStage" ? "selected" : ""}>Retirer l'étape</option>
+          <option value="commentStage" ${(mod.effect || "multiply") === "commentStage" ? "selected" : ""}>Afficher un commentaire d'étape</option>
         </select>
       </label>
       <label class="multiplier-field">Coefficient
@@ -549,8 +563,9 @@ function renderModifiersEditor(node, project) {
     const syncUi = () => {
       const isStageScope = scopeSelect.value === "stage";
       const isExclude = effectSelect.value === "excludeStage";
+      const isCommentOnly = effectSelect.value === "commentStage";
       stageField.style.display = isStageScope ? "grid" : "none";
-      multiplierField.style.display = isExclude ? "none" : "grid";
+      multiplierField.style.display = (isExclude || isCommentOnly) ? "none" : "grid";
     };
 
     const normalizeAndSave = () => {
@@ -558,6 +573,9 @@ function renderModifiersEditor(node, project) {
       mod.operator = opSelect.value;
       const questionType = project.questions?.find((q) => q.key === mod.questionKey)?.type;
       mod.expectedValue = questionType === "number" ? Number(expectedInput.value || 0) : expectedInput.value;
+      if (effectSelect.value === "excludeStage" || effectSelect.value === "commentStage") {
+        scopeSelect.value = "stage";
+      }
       mod.scope = scopeSelect.value;
       mod.effect = effectSelect.value;
       mod.multiplier = Number(multiplierInput.value || 1);
@@ -618,6 +636,10 @@ function buildModifierPreview(project) {
         if ((mod.effect || "multiply") === "excludeStage") {
           const stageLabel = project.stages.find((s) => s.id === mod.stageId)?.label || mod.stageRef || "étape cible";
           return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, alors l'étape <strong>${stageLabel}</strong> est retirée.</li>`;
+        }
+        if ((mod.effect || "multiply") === "commentStage") {
+          const stageLabel = project.stages.find((s) => s.id === mod.stageId)?.label || mod.stageRef || "étape cible";
+          return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, afficher un commentaire sur l'étape <strong>${stageLabel}</strong>.</li>`;
         }
         return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, appliquer x${round1(Number(mod.multiplier || 1))} ${scope}.</li>`;
       }).join("")}
