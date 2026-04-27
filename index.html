@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FMV Planner Local</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar glass">
+        <div>
+          <h1>FMV Planner</h1>
+          <p>Recommandations d'heures par projet, étape et participant</p>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Navigation principale">
+          <button class="tab active" data-tab="userSpace">Espace utilisateur</button>
+          <button class="tab" data-tab="adminSpace">Back-office</button>
+        </div>
+      </header>
+
+      <main>
+        <section id="userSpace" class="panel active">
+          <div class="card">
+            <h2>1) Sélection du projet</h2>
+            <div class="row">
+              <label for="projectSelect">Type de projet</label>
+              <select id="projectSelect"></select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>2) Questionnaire dynamique</h2>
+            <form id="questionnaireForm" class="questionnaire"></form>
+            <button id="calculateBtn" class="btn primary">Calculer la recommandation</button>
+          </div>
+
+          <div class="card" id="reportCard">
+            <div class="row between align-center">
+              <h2>3) Recommandation détaillée</h2>
+              <button id="exportPdfBtn" class="btn">Exporter PDF</button>
+            </div>
+            <div id="reportOutput" class="report-empty">Aucune recommandation calculée.</div>
+          </div>
+        </section>
+
+        <section id="adminSpace" class="panel">
+          <div class="card">
+            <h2>Configuration (blocs Lego)</h2>
+            <p class="muted">Modifiez les modèles ci-dessous, puis sauvegardez localement ou exportez en JSON.</p>
+            <div class="row wrap">
+              <button id="addProjectBtn" class="btn primary">+ Nouveau type de projet</button>
+              <button id="saveLocalBtn" class="btn">Sauvegarder en local</button>
+              <button id="resetBtn" class="btn danger">Réinitialiser</button>
+              <button id="exportJsonBtn" class="btn">Exporter JSON</button>
+              <label class="btn file-input">
+                Importer JSON
+                <input type="file" id="importJsonInput" accept="application/json" />
+              </label>
+            </div>
+          </div>
+
+          <div id="adminProjects"></div>
+        </section>
+      </main>
+
+      <footer>
+        <span>FMV Planner — Local only (JSON + LocalStorage)</span>
+        <span id="versionBadge">Version v1.0.0</span>
+      </footer>
+    </div>
+
+    <template id="projectBlockTemplate">
+      <article class="card project-block">
+        <div class="row between align-center">
+          <input class="project-name" placeholder="Nom du projet" />
+          <button class="btn danger delete-project">Supprimer projet</button>
+        </div>
+        <textarea class="project-description" rows="2" placeholder="Description"></textarea>
+
+        <div class="lego-grid">
+          <div>
+            <h3>Étapes</h3>
+            <div class="stages-list"></div>
+            <button class="btn small add-stage">+ Étape</button>
+          </div>
+          <div>
+            <h3>Participants</h3>
+            <div class="participants-list"></div>
+            <button class="btn small add-participant">+ Participant</button>
+          </div>
+          <div>
+            <h3>Questions</h3>
+            <div class="questions-list"></div>
+            <button class="btn small add-question">+ Question</button>
+          </div>
+        </div>
+
+        <div>
+          <h3>Règles horaires (base + conditionnelles)</h3>
+          <div class="rules-table-wrapper">
+            <table class="rules-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
