@@ -70,6 +70,7 @@ input,select,textarea {
   width: 100%;
   background: #fbfdff;
   color: var(--text);
+  font: inherit;
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px;
