@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -31,6 +31,13 @@ const defaultConfig = {
           type: "select",
           key: "complexity",
           options: ["Standard", "Élevé"]
+        },
+        {
+          id: crypto.randomUUID(),
+          label: "Slides déjà prêtes ?",
+          type: "select",
+          key: "slidesReady",
+          options: ["Oui", "Non"]
         }
       ],
       ranges: {},
@@ -49,6 +56,15 @@ const defaultConfig = {
           expectedValue: 30,
           multiplier: 1.2,
           note: "Durée > 30 min: +20%"
+        },
+        {
+          id: crypto.randomUUID(),
+          questionKey: "slidesReady",
+          expectedValue: "Oui",
+          scope: "stage",
+          effect: "excludeStage",
+          stageRef: "Préparation des slides",
+          note: "Slides déjà prêtes: étape « Préparation des slides » retirée"
         }
       ]
     }
@@ -165,12 +181,34 @@ function computeRecommendation() {
   const data = new FormData(els.questionnaireForm);
   const answers = Object.fromEntries(data.entries());
 
-  let multiplier = 1;
+  let globalMultiplier = 1;
   const triggered = [];
+  const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [] }]));
+
+  const resolveStageId = (mod) =>
+    mod.stageId || project.stages.find((s) => s.label === mod.stageRef)?.id;
+
   for (const mod of project.modifiers || []) {
     if (evaluateModifier(mod, answers)) {
-      multiplier *= Number(mod.multiplier || 1);
-      triggered.push(mod.note || "Modificateur appliqué");
+      const effect = mod.effect || "multiply";
+      const scope = mod.scope || "global";
+      const note = mod.note || "Modificateur appliqué";
+
+      if (scope === "stage") {
+        const stageId = resolveStageId(mod);
+        if (!stageId || !stageEffects.has(stageId)) continue;
+        const stageState = stageEffects.get(stageId);
+        if (effect === "excludeStage") {
+          stageState.excluded = true;
+        } else {
+          stageState.multiplier *= Number(mod.multiplier || 1);
+        }
+        stageState.notes.push(note);
+      } else {
+        globalMultiplier *= Number(mod.multiplier || 1);
+      }
+
+      triggered.push(note);
     }
   }
 
@@ -179,11 +217,23 @@ function computeRecommendation() {
   let globalMax = 0;
 
   for (const stage of project.stages) {
+    const stageState = stageEffects.get(stage.id) || { multiplier: 1, excluded: false, notes: [] };
+    if (stageState.excluded) {
+      sections.push(`
+        <div>
+          <h3 class="stage-title">${stage.label}</h3>
+          <p>Étape non requise selon vos réponses.</p>
+        </div>
+      `);
+      continue;
+    }
+
     let rows = "";
     for (const participant of project.participants) {
       const base = project.ranges?.[stage.id]?.[participant.id] || { min: 0, max: 0, note: "" };
-      const min = round1(Number(base.min) * multiplier);
-      const max = round1(Number(base.max) * multiplier);
+      const effectiveMultiplier = globalMultiplier * stageState.multiplier;
+      const min = round1(Number(base.min) * effectiveMultiplier);
+      const max = round1(Number(base.max) * effectiveMultiplier);
       globalMin += min;
       globalMax += max;
       rows += `<tr><td>${participant.label}</td><td>${min} h</td><td>${max} h</td><td>${base.note || "—"}</td></tr>`;
@@ -191,6 +241,7 @@ function computeRecommendation() {
     sections.push(`
       <div>
         <h3 class="stage-title">${stage.label}</h3>
+        ${stageState.notes.length ? `<p><strong>Impact spécifique:</strong> ${stageState.notes.join(" · ")}</p>` : ""}
         <table>
           <thead><tr><th>Participant</th><th>Min</th><th>Max</th><th>Justification</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -202,7 +253,7 @@ function computeRecommendation() {
   els.reportOutput.innerHTML = `
     <div class="report-grid">
       <p><strong>Projet:</strong> ${project.name}</p>
-      <p><strong>Facteur global appliqué:</strong> x${round1(multiplier)}</p>
+      <p><strong>Facteur global appliqué:</strong> x${round1(globalMultiplier)}</p>
       <p><strong>Hypothèses:</strong> ${triggered.length ? triggered.join(" · ") : "Aucun modificateur"}</p>
       ${sections.join("")}
       <table>
