@@ -71,37 +71,49 @@
 
       <footer>
         <span>FMV Planner — Local only (JSON + LocalStorage)</span>
-        <span id="versionBadge">Version v1.4.0</span>
+        <span id="versionBadge">Version v1.5.0</span>
       </footer>
     </div>
 
     <template id="projectBlockTemplate">
       <article class="card project-block">
-        <div class="row between align-center">
-          <input class="project-name" placeholder="Nom du projet" />
-          <button class="btn danger delete-project">Supprimer projet</button>
-        </div>
-        <textarea class="project-description" rows="2" placeholder="Description"></textarea>
-
-        <div class="lego-grid">
-          <div>
-            <h3>Étapes</h3>
-            <div class="stages-list"></div>
-            <button class="btn small add-stage">+ Étape</button>
-          </div>
-          <div>
-            <h3>Participants</h3>
-            <div class="participants-list"></div>
-            <button class="btn small add-participant">+ Participant</button>
-          </div>
-          <div>
-            <h3>Questions</h3>
-            <div class="questions-list"></div>
-            <button class="btn small add-question">+ Question</button>
-          </div>
+        <div class="wizard-header">
+          <h3>Parcours de configuration</h3>
+          <div class="wizard-steps" role="tablist" aria-label="Étapes de configuration"></div>
         </div>
 
-        <div>
+        <section class="wizard-section" data-step="0" data-title="Projet">
+          <div class="row between align-center wrap">
+            <input class="project-name" placeholder="Nom du projet" />
+            <div class="row wrap">
+              <button class="btn duplicate-project">Dupliquer projet</button>
+              <button class="btn danger delete-project">Supprimer projet</button>
+            </div>
+          </div>
+          <textarea class="project-description" rows="2" placeholder="Description"></textarea>
+        </section>
+
+        <section class="wizard-section" data-step="1" data-title="Structure">
+          <div class="lego-grid">
+            <div>
+              <h3>Étapes</h3>
+              <div class="stages-list"></div>
+              <button class="btn small add-stage">+ Étape</button>
+            </div>
+            <div>
+              <h3>Participants</h3>
+              <div class="participants-list"></div>
+              <button class="btn small add-participant">+ Participant</button>
+            </div>
+            <div>
+              <h3>Questions</h3>
+              <div class="questions-list"></div>
+              <button class="btn small add-question">+ Question</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="wizard-section" data-step="2" data-title="Règles">
           <h3>Règles horaires (base + conditionnelles)</h3>
           <div class="rules-table-wrapper">
             <table class="rules-table">
@@ -109,6 +121,12 @@
               <tbody></tbody>
             </table>
           </div>
+        </section>
+        <section class="wizard-section modifiers-anchor" data-step="3" data-title="Modificateurs"></section>
+        <section class="wizard-section project-summary" data-step="4" data-title="Résumé"></section>
+        <div class="wizard-footer">
+          <button class="btn wizard-prev">← Étape précédente</button>
+          <button class="btn primary wizard-next">Étape suivante →</button>
         </div>
       </article>
     </template>
