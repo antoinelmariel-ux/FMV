@@ -148,16 +148,6 @@ input,select,textarea {
   padding: 8px;
 }
 .report-grid .stage-title { margin-top: 14px; color: #2f6fec; }
-
-/* Fusion visuelle des cases de matrice de risque (UI uniquement). */
-.risk-matrix .risk-cell {
-  position: relative;
-  isolation: isolate;
-}
-.risk-matrix .risk-cell.merged-left { border-left-color: transparent; }
-.risk-matrix .risk-cell.merged-right { border-right-color: transparent; }
-.risk-matrix .risk-cell.merged-top { border-top-color: transparent; }
-.risk-matrix .risk-cell.merged-bottom { border-bottom-color: transparent; }
 footer {
   margin-top: 18px;
   display: flex;

@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.4.0";
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -135,64 +135,7 @@ function refresh() {
   renderProjectSelect();
   renderQuestionnaire();
   renderAdmin();
-  applyRiskCellVisualMerge();
   els.versionBadge.textContent = `Version v${state.version || APP_VERSION}`;
-}
-
-function applyRiskCellVisualMerge() {
-  const matrices = document.querySelectorAll(".risk-matrix");
-  matrices.forEach((matrix) => {
-    const cells = Array.from(matrix.querySelectorAll(".risk-cell"));
-    cells.forEach((cell) => {
-      cell.classList.remove(
-        "merged-left",
-        "merged-right",
-        "merged-top",
-        "merged-bottom",
-        "merged-center"
-      );
-    });
-
-    const grid = new Map();
-    cells.forEach((cell) => {
-      const row = Number(cell.dataset.row);
-      const col = Number(cell.dataset.col);
-      if (Number.isNaN(row) || Number.isNaN(col)) return;
-      grid.set(`${row}:${col}`, cell);
-    });
-
-    const getMergeKey = (cell) => {
-      const risk = cell.dataset.riskBrut || "";
-      const control = cell.dataset.maitriseLevel || "";
-      const explicitColor = cell.dataset.color || "";
-      const visualColor = explicitColor || getComputedStyle(cell).backgroundColor || "";
-      return `${risk}|${control}|${visualColor}`;
-    };
-
-    const canMerge = (a, b) => Boolean(a && b) && getMergeKey(a) === getMergeKey(b);
-
-    grid.forEach((cell, key) => {
-      const [row, col] = key.split(":").map(Number);
-      const left = grid.get(`${row}:${col - 1}`);
-      const right = grid.get(`${row}:${col + 1}`);
-      const top = grid.get(`${row - 1}:${col}`);
-      const bottom = grid.get(`${row + 1}:${col}`);
-
-      if (canMerge(cell, left)) cell.classList.add("merged-left");
-      if (canMerge(cell, right)) cell.classList.add("merged-right");
-      if (canMerge(cell, top)) cell.classList.add("merged-top");
-      if (canMerge(cell, bottom)) cell.classList.add("merged-bottom");
-
-      if (
-        cell.classList.contains("merged-left") &&
-        cell.classList.contains("merged-right") &&
-        cell.classList.contains("merged-top") &&
-        cell.classList.contains("merged-bottom")
-      ) {
-        cell.classList.add("merged-center");
-      }
-    });
-  });
 }
 
 els.tabs.forEach((tab) => {
