@@ -89,6 +89,43 @@ input,select,textarea {
   color: var(--muted);
 }
 .helper-list li { margin: 6px 0; }
+.wizard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  position: sticky;
+  top: 8px;
+  background: var(--card);
+  z-index: 2;
+  padding-bottom: 8px;
+}
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wizard-step-btn {
+  font-size: .85rem;
+  padding: 7px 10px;
+}
+.wizard-section {
+  display: none;
+  margin-top: 10px;
+}
+.wizard-section.active-step {
+  display: block;
+}
+.wizard-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.wizard-footer .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .lego-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 16px; }
 .chip {
   display: grid; grid-template-columns: 1fr auto auto; gap: 6px;
@@ -139,6 +176,31 @@ input,select,textarea {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px;
+}
+.modifier-preview {
+  margin-top: 8px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+.toast {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  background: #1f2a44;
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: none;
+  gap: 10px;
+  align-items: center;
+  box-shadow: var(--soft-shadow);
+  z-index: 50;
+}
+.toast.show {
+  display: flex;
+}
+.toast .btn {
+  color: #1f2a44;
 }
 .report-empty { color: var(--muted); }
 .report-grid { display: grid; gap: 10px; }

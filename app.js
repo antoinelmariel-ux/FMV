@@ -1,5 +1,6 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
+let undoSnapshot = null;
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -136,6 +137,45 @@ function refresh() {
   renderQuestionnaire();
   renderAdmin();
   els.versionBadge.textContent = `Version v${state.version || APP_VERSION}`;
+}
+
+function showToast(message, actionLabel, onAction) {
+  let toast = document.getElementById("appToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "appToast";
+    toast.className = "toast";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span>${message}</span>`;
+  if (actionLabel && onAction) {
+    const btn = document.createElement("button");
+    btn.className = "btn small";
+    btn.textContent = actionLabel;
+    btn.addEventListener("click", () => {
+      onAction();
+      toast.classList.remove("show");
+    });
+    toast.appendChild(btn);
+  }
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 4500);
+}
+
+function saveUndoState(label) {
+  undoSnapshot = {
+    label,
+    payload: structuredClone(state)
+  };
+}
+
+function restoreUndoState() {
+  if (!undoSnapshot) return;
+  state = undoSnapshot.payload;
+  saveConfig();
+  refresh();
+  showToast(`Action annulée : ${undoSnapshot.label}`);
+  undoSnapshot = null;
 }
 
 els.tabs.forEach((tab) => {
@@ -281,6 +321,8 @@ function renderAdmin() {
 
   state.projectTypes.forEach((project) => {
     const node = els.projectBlockTemplate.content.firstElementChild.cloneNode(true);
+    const wizardSections = Array.from(node.querySelectorAll(".wizard-section"));
+    const stepBar = node.querySelector(".wizard-steps");
     node.querySelector(".project-name").value = project.name;
     node.querySelector(".project-description").value = project.description || "";
 
@@ -359,8 +401,22 @@ function renderAdmin() {
     });
 
     node.querySelector(".delete-project").addEventListener("click", () => {
+      const name = project.name || "Projet sans nom";
+      if (!confirm(`Supprimer définitivement « ${name} » ?`)) return;
+      saveUndoState(`suppression de ${name}`);
       state.projectTypes = state.projectTypes.filter((p) => p.id !== project.id);
       saveConfig(); refresh();
+      showToast(`Projet « ${name} » supprimé.`, "Annuler", restoreUndoState);
+    });
+
+    node.querySelector(".duplicate-project").addEventListener("click", () => {
+      const duplicated = duplicateProject(project);
+      state.projectTypes.push(duplicated);
+      saveConfig();
+      refresh();
+      els.projectSelect.value = duplicated.id;
+      renderQuestionnaire();
+      showToast(`Projet « ${project.name} » dupliqué.`);
     });
 
     node.querySelector(".project-name").addEventListener("input", (e) => {
@@ -376,11 +432,40 @@ function renderAdmin() {
 
     renderRulesTable(node, project);
     renderModifiersEditor(node, project);
+    renderProjectSummary(node, project);
+    initWizard(node, wizardSections, stepBar);
     els.adminProjects.appendChild(node);
   });
 }
 
+function initWizard(node, sections, stepBar) {
+  let currentStep = 0;
+  stepBar.innerHTML = "";
+  sections.forEach((section, idx) => {
+    const stepBtn = document.createElement("button");
+    stepBtn.className = "tab wizard-step-btn";
+    stepBtn.textContent = `${idx + 1}. ${section.dataset.title || "Étape"}`;
+    stepBtn.addEventListener("click", () => showStep(idx));
+    stepBar.appendChild(stepBtn);
+  });
+  const prevBtn = node.querySelector(".wizard-prev");
+  const nextBtn = node.querySelector(".wizard-next");
+
+  const showStep = (stepIdx) => {
+    currentStep = Math.min(Math.max(stepIdx, 0), sections.length - 1);
+    sections.forEach((section, idx) => section.classList.toggle("active-step", idx === currentStep));
+    stepBar.querySelectorAll(".wizard-step-btn").forEach((btn, idx) => btn.classList.toggle("active", idx === currentStep));
+    prevBtn.disabled = currentStep === 0;
+    nextBtn.textContent = currentStep === sections.length - 1 ? "Configuration terminée ✓" : "Étape suivante →";
+  };
+
+  prevBtn.addEventListener("click", () => showStep(currentStep - 1));
+  nextBtn.addEventListener("click", () => showStep(currentStep + 1));
+  showStep(0);
+}
+
 function renderModifiersEditor(node, project) {
+  const anchor = node.querySelector(".modifiers-anchor");
   const wrapper = document.createElement("div");
   wrapper.className = "modifiers-editor";
   wrapper.innerHTML = `
@@ -388,6 +473,7 @@ function renderModifiersEditor(node, project) {
     <p class="muted">Configurez ici comment chaque réponse ajuste les heures min/max (globalement ou par étape).</p>
     <div class="modifiers-list"></div>
     <button class="btn small add-modifier">+ Règle d'adaptation</button>
+    <div class="modifier-preview"></div>
   `;
   const listNode = wrapper.querySelector(".modifiers-list");
 
@@ -397,6 +483,8 @@ function renderModifiersEditor(node, project) {
   const stageOptions = (project.stages || [])
     .map((s) => `<option value="${s.id}">${s.label}</option>`)
     .join("");
+
+  const previewNode = wrapper.querySelector(".modifier-preview");
 
   (project.modifiers || []).forEach((mod) => {
     const row = document.createElement("div");
@@ -513,7 +601,81 @@ function renderModifiersEditor(node, project) {
     refresh();
   });
 
-  node.appendChild(wrapper);
+  previewNode.innerHTML = buildModifierPreview(project);
+  anchor.innerHTML = "";
+  anchor.appendChild(wrapper);
+}
+
+function buildModifierPreview(project) {
+  if (!project.modifiers?.length) return "<p class='muted'>Aucune règle d'adaptation configurée.</p>";
+  return `
+    <h4>Prévisualisation de l'impact des règles</h4>
+    <ul class="helper-list">
+      ${project.modifiers.map((mod) => {
+        const question = project.questions.find((q) => q.key === mod.questionKey)?.label || mod.questionKey;
+        const operator = mod.operator === ">" ? ">" : "=";
+        const scope = mod.scope === "stage" ? "sur une étape" : "globalement";
+        if ((mod.effect || "multiply") === "excludeStage") {
+          const stageLabel = project.stages.find((s) => s.id === mod.stageId)?.label || mod.stageRef || "étape cible";
+          return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, alors l'étape <strong>${stageLabel}</strong> est retirée.</li>`;
+        }
+        return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, appliquer x${round1(Number(mod.multiplier || 1))} ${scope}.</li>`;
+      }).join("")}
+    </ul>
+  `;
+}
+
+function duplicateProject(project) {
+  const stageIdMap = new Map();
+  const participantIdMap = new Map();
+  const duplicatedStages = project.stages.map((stage) => {
+    const newId = crypto.randomUUID();
+    stageIdMap.set(stage.id, newId);
+    return { ...stage, id: newId };
+  });
+  const duplicatedParticipants = project.participants.map((participant) => {
+    const newId = crypto.randomUUID();
+    participantIdMap.set(participant.id, newId);
+    return { ...participant, id: newId };
+  });
+  const duplicatedRanges = {};
+  for (const oldStageId of Object.keys(project.ranges || {})) {
+    const newStageId = stageIdMap.get(oldStageId);
+    duplicatedRanges[newStageId] = {};
+    for (const oldParticipantId of Object.keys(project.ranges?.[oldStageId] || {})) {
+      duplicatedRanges[newStageId][participantIdMap.get(oldParticipantId)] = {
+        ...project.ranges[oldStageId][oldParticipantId]
+      };
+    }
+  }
+  return {
+    ...structuredClone(project),
+    id: crypto.randomUUID(),
+    name: `${project.name} (copie)`,
+    stages: duplicatedStages,
+    participants: duplicatedParticipants,
+    questions: project.questions.map((q) => ({ ...q, id: crypto.randomUUID() })),
+    ranges: duplicatedRanges,
+    modifiers: project.modifiers.map((mod) => ({
+      ...mod,
+      id: crypto.randomUUID(),
+      stageId: mod.stageId ? stageIdMap.get(mod.stageId) : mod.stageId
+    }))
+  };
+}
+
+function renderProjectSummary(node, project) {
+  const target = node.querySelector(".project-summary");
+  target.innerHTML = `
+    <h3>Résumé avant sauvegarde/export</h3>
+    <p><strong>${project.name || "Projet sans nom"}</strong></p>
+    <ul class="helper-list">
+      <li>${project.stages.length} étape(s)</li>
+      <li>${project.participants.length} participant(s)</li>
+      <li>${project.questions.length} question(s)</li>
+      <li>${(project.modifiers || []).length} modificateur(s)</li>
+    </ul>
+  `;
 }
 
 function renderRulesTable(node, project) {
@@ -616,14 +778,17 @@ els.addProjectBtn.addEventListener("click", () => {
 
 els.saveLocalBtn.addEventListener("click", () => {
   saveConfig();
-  alert("Configuration sauvegardée localement.");
+  showToast(`Configuration sauvegardée (${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}).`);
 });
 
 els.resetBtn.addEventListener("click", () => {
-  if (!confirm("Réinitialiser toute la configuration ?")) return;
+  const projectCount = state.projectTypes.length;
+  if (!confirm(`Réinitialiser toute la configuration (${projectCount} projet(s)) ?`)) return;
+  saveUndoState("réinitialisation complète");
   state = structuredClone(defaultConfig);
   saveConfig();
   refresh();
+  showToast("Configuration réinitialisée.", "Annuler", restoreUndoState);
 });
 
 els.exportJsonBtn.addEventListener("click", () => {
