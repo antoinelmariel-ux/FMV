@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.13.0";
+const APP_VERSION = "1.14.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -227,9 +227,17 @@ function renderQuestionnaire() {
   els.questionnaireForm.innerHTML = project.questions
     .map((q) => {
       if (q.type === "select") {
+        if (q.selectionMode === "multiple") {
+          const opts = (q.options || [])
+            .map(
+              (o) =>
+                `<label class="checkbox-option"><input type="checkbox" name="${q.key}" value="${o.value}" /> ${o.label}</label>`
+            )
+            .join("");
+          return `<fieldset class="checkbox-group"><legend>${q.label}</legend>${opts}</fieldset>`;
+        }
         const opts = (q.options || []).map((o) => `<option value="${o.value}">${o.label}</option>`).join("");
-        const multiple = q.selectionMode === "multiple" ? " multiple" : "";
-        return `<label>${q.label}<select name="${q.key}"${multiple}>${opts}</select></label>`;
+        return `<label>${q.label}<select name="${q.key}">${opts}</select></label>`;
       }
       return `<label>${q.label}<input type="number" step="0.1" name="${q.key}" value="0"/></label>`;
     })
@@ -254,10 +262,18 @@ function computeRecommendation() {
   if (!project) return;
 
   const data = new FormData(els.questionnaireForm);
-  const answers = Object.fromEntries(data.entries());
+  const answers = {};
+  for (const question of project.questions || []) {
+    if (question.type === "select" && question.selectionMode === "multiple") {
+      answers[question.key] = data.getAll(question.key);
+    } else {
+      answers[question.key] = data.get(question.key);
+    }
+  }
 
   let globalMultiplier = 1;
   const triggered = [];
+  const globalTriggered = [];
   const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [], hiddenParticipants: new Set() }]));
 
   const resolveStageId = (mod) =>
@@ -287,6 +303,7 @@ function computeRecommendation() {
         stageState.notes.push(note);
       } else {
         globalMultiplier *= Number(mod.multiplier || 1);
+        globalTriggered.push(note);
       }
 
       triggered.push(note);
@@ -318,7 +335,13 @@ function computeRecommendation() {
       const max = round1(Number(base.max) * effectiveMultiplier);
       globalMin += min;
       globalMax += max;
-      rows += `<tr><td>${participant.label}</td><td>${min} h</td><td>${max} h</td><td>${base.note || "—"}</td></tr>`;
+      const justificationParts = [];
+      if (base.note) justificationParts.push(base.note);
+      if (stageState.notes.length) justificationParts.push(`Modificateurs: ${stageState.notes.join(" · ")}`);
+      if (globalTriggered.length) {
+        justificationParts.push(`Modificateurs globaux: ${globalTriggered.join(" · ")}`);
+      }
+      rows += `<tr><td>${participant.label}</td><td>${min} h</td><td>${max} h</td><td>${justificationParts.join(" | ") || "—"}</td></tr>`;
     }
     sections.push(`
       <div>

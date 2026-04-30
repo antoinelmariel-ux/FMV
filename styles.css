@@ -76,6 +76,26 @@ input,select,textarea {
   padding: 10px;
 }
 .questionnaire { display: grid; gap: 10px; margin-bottom: 12px; }
+.checkbox-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fbfdff;
+}
+.checkbox-group legend {
+  color: var(--muted);
+  padding: 0 4px;
+}
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  color: var(--text);
+}
+.checkbox-option input {
+  width: auto;
+}
 .btn.primary { background: #2f6fec; border-color: #2f6fec; color: #fff; }
 .btn.danger { background: #fff1f1; border-color: #ffc9c9; color: #b33b3b; }
 .btn.small { font-size: .85rem; padding: 7px 10px; }
