@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.11.0";
+const APP_VERSION = "1.12.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -239,6 +239,11 @@ function renderQuestionnaire() {
 function evaluateModifier(mod, answers) {
   const actual = answers[mod.questionKey];
   if (mod.operator === ">") return Number(actual) > Number(mod.expectedValue);
+  if (mod.operator === "not_in") {
+    const expectedValues = Array.isArray(mod.expectedValues) ? mod.expectedValues : [mod.expectedValue];
+    if (Array.isArray(actual)) return actual.every((v) => !expectedValues.map(String).includes(String(v)));
+    return !expectedValues.map(String).includes(String(actual));
+  }
   const expectedValues = Array.isArray(mod.expectedValues) ? mod.expectedValues : [mod.expectedValue];
   if (Array.isArray(actual)) return actual.some((v) => expectedValues.map(String).includes(String(v)));
   return expectedValues.map(String).includes(String(actual));
@@ -449,9 +454,8 @@ function renderAdmin(projectIdToOpen = null) {
         (q.options || []).forEach((opt, optIndex) => {
           const row = document.createElement("div");
           row.className = "choice-option-row";
-          row.innerHTML = `<input value="${opt.label}" placeholder="Libellé" /><input value="${opt.value}" placeholder="Valeur (interne)" /><div class="row-actions"><button type="button" class="btn small move-up" title="Monter">↑</button><button type="button" class="btn small move-down" title="Descendre">↓</button><button type="button" class="btn danger small">✕</button></div>`;
+          row.innerHTML = `<input value="${opt.label}" placeholder="Libellé" /><div class="row-actions"><button type="button" class="btn small move-up" title="Monter">↑</button><button type="button" class="btn small move-down" title="Descendre">↓</button><button type="button" class="btn danger small">✕</button></div>`;
           row.querySelectorAll("input")[0].addEventListener("input", (e) => { q.options[optIndex].label = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
-          row.querySelectorAll("input")[1].addEventListener("input", (e) => { q.options[optIndex].value = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
           row.querySelector(".move-up").addEventListener("click", () => { moveItem(q.options, optIndex, -1); saveConfig(); renderOptions(); renderQuestionnaire(); renderModifiersEditor(node, project); });
           row.querySelector(".move-down").addEventListener("click", () => { moveItem(q.options, optIndex, 1); saveConfig(); renderOptions(); renderQuestionnaire(); renderModifiersEditor(node, project); });
           row.querySelector(".btn.danger").addEventListener("click", () => { q.options.splice(optIndex, 1); saveConfig(); renderQuestionnaire(); renderOptions(); renderModifiersEditor(node, project); });
@@ -590,7 +594,7 @@ function renderModifiersEditor(node, project) {
 
   const previewNode = wrapper.querySelector(".modifier-preview");
 const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key === key);
-  const getQuestionChoices = (question) => question?.type === "select" ? (question.options || []).map((o) => o.value) : [];
+  const getQuestionChoices = (question) => question?.type === "select" ? (question.options || []).map((o) => o.label) : [];
 
   (project.modifiers || []).forEach((mod) => {
     const row = document.createElement("div");
@@ -601,7 +605,8 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       </label>
       <label>Condition
         <select data-k="operator">
-          <option value="=" ${mod.operator !== ">" ? "selected" : ""}>Égale à</option>
+          <option value="in" ${mod.operator !== ">" && mod.operator !== "not_in" ? "selected" : ""}>Contient</option>
+          <option value="not_in" ${mod.operator === "not_in" ? "selected" : ""}>Ne contient pas</option>
           <option value=">" ${mod.operator === ">" ? "selected" : ""}>Supérieure à</option>
         </select>
       </label>
@@ -655,7 +660,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
     const participantField = row.querySelector(".effect-participant");
 
     qSelect.value = mod.questionKey || project.questions?.[0]?.key || "";
-    opSelect.value = mod.operator === ">" ? ">" : "=";
+    opSelect.value = mod.operator === ">" ? ">" : (mod.operator === "not_in" ? "not_in" : "in");
     scopeSelect.value = mod.scope === "stage" ? "stage" : "global";
     effectSelect.value = mod.effect || "multiply";
     stageSelect.value = mod.stageId || project.stages?.find((s) => s.label === mod.stageRef)?.id || "";
@@ -663,12 +668,21 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
     const populateExpectedValues = () => {
       const question = getQuestionByKey(qSelect.value);
       if (question?.type === "select") {
+        opSelect.innerHTML = `
+          <option value="in">Contient</option>
+          <option value="not_in">Ne contient pas</option>
+        `;
+        if (!["in", "not_in"].includes(mod.operator)) mod.operator = "in";
+        opSelect.value = mod.operator;
         const choices = getQuestionChoices(question);
         expectedInput.innerHTML = choices.map((c) => `<option value="${c}">${c}</option>`).join("");
         expectedInput.value = mod.expectedValue || choices[0] || "";
         expectedInput.style.display = "block";
         expectedValuesNode.innerHTML = "";
       } else {
+        opSelect.innerHTML = `<option value=">">Supérieure à</option>`;
+        mod.operator = ">";
+        opSelect.value = mod.operator;
         expectedValuesNode.innerHTML = `<input type="number" step="0.1" value="${mod.expectedValue ?? 0}" />`;
         expectedValuesNode.querySelector("input")?.addEventListener("input", normalizeAndSave);
         expectedInput.style.display = "none";
@@ -730,8 +744,8 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
     project.modifiers.push({
       id: crypto.randomUUID(),
       questionKey: firstQuestion?.key || "",
-      operator: firstQuestion?.type === "number" ? ">" : "=",
-      expectedValue: firstQuestion?.type === "number" ? 0 : (firstQuestion?.options?.[0]?.value || ""),
+      operator: firstQuestion?.type === "number" ? ">" : "in",
+      expectedValue: firstQuestion?.type === "number" ? 0 : (firstQuestion?.options?.[0]?.label || ""),
       scope: "global",
       effect: "multiply",
       multiplier: 1.1,
