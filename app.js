@@ -1,5 +1,4 @@
-const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.18.0";
+const APP_VERSION = "1.19.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -102,16 +101,11 @@ const els = {
 };
 
 function loadConfig() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : structuredClone(defaultConfig);
-  } catch {
-    return structuredClone(defaultConfig);
-  }
+  return structuredClone(defaultConfig);
 }
 
 function saveConfig() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state, null, 2));
+  // Local persistence intentionally disabled.
 }
 
 function ensureRanges() {
