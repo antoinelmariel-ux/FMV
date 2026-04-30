@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.14.0";
+const APP_VERSION = "1.15.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -714,10 +714,11 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       const isStageScope = scopeSelect.value === "stage";
       const isExclude = effectSelect.value === "excludeStage";
       const isCommentOnly = effectSelect.value === "commentStage";
+      const isToggleParticipant = effectSelect.value === "toggleParticipant";
       stageField.style.display = isStageScope ? "grid" : "none";
-      participantField.style.display = effectSelect.value === "toggleParticipant" ? "grid" : "none";
-      multiplierField.style.display = (isExclude || isCommentOnly || effectSelect.value === "toggleParticipant") ? "none" : "grid";
-      row.querySelector(".effect-row-break").style.display = isCommentOnly ? "grid" : "none";
+      participantField.style.display = isToggleParticipant ? "grid" : "none";
+      multiplierField.style.display = (isExclude || isCommentOnly || isToggleParticipant) ? "none" : "grid";
+      row.querySelector(".effect-row-break").style.display = (isCommentOnly || isToggleParticipant) ? "grid" : "none";
     };
 
     const normalizeAndSave = () => {
@@ -726,7 +727,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       const questionType = project.questions?.find((q) => q.key === mod.questionKey)?.type;
       const numericExpected = expectedValuesNode.querySelector('input[type="number"]');
       mod.expectedValue = questionType === "number" ? Number(numericExpected?.value || 0) : expectedInput.value;
-      if (effectSelect.value === "excludeStage" || effectSelect.value === "commentStage") {
+      if (["excludeStage", "commentStage", "toggleParticipant"].includes(effectSelect.value)) {
         scopeSelect.value = "stage";
       }
       mod.scope = scopeSelect.value;
