@@ -127,7 +127,8 @@ input,select,textarea {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.lego-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 16px; }
+.lego-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lego-grid > :nth-child(3) { grid-column: 1 / -1; }
 .chip {
   display: grid; grid-template-columns: 1fr auto auto; gap: 6px;
   background: #f8fbff; border: 1px solid var(--border); border-radius: 12px;
@@ -235,7 +236,7 @@ footer {
 #adminProjects{margin-top:14px}
 .question-type-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .choice-options-editor{display:grid;gap:6px;padding:8px;background:#f4f8ff;border:1px dashed var(--border);border-radius:10px}
-.choice-option-row{display:grid;grid-template-columns:1fr auto;gap:6px}
+.choice-option-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;align-items:center}
 .expected-values-wrap{display:grid;gap:6px}
 .expected-values{display:flex;flex-wrap:wrap;gap:6px}
 .expected-pill{background:#eaf2ff;border:1px solid #bfd7ff;border-radius:999px;padding:4px 10px;font-size:.82rem}
