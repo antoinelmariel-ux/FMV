@@ -248,3 +248,9 @@ footer {
 .modal.show{display:flex}
 .modal-backdrop{position:absolute;inset:0;background:rgba(21,35,60,.45)}
 .modal-content{position:relative;width:min(1180px,94vw);max-height:92vh;overflow:auto}
+
+.participant-checkboxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.participant-checkboxes label{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:10px;color:var(--text)}
+.participant-checkboxes input{width:auto}
+.row-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.choice-option-row .row-actions{grid-column:3 / 5}
