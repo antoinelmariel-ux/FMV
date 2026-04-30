@@ -1,7 +1,8 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.10.0";
+const APP_VERSION = "1.11.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
+const editorStepByProjectId = new Map();
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -115,6 +116,7 @@ function saveConfig() {
 
 function ensureRanges() {
   for (const project of state.projectTypes) {
+    ensureEntityValues(project);
     ensureQuestionKeys(project);
     normalizeQuestionOptions(project);
     project.ranges ||= {};
@@ -125,6 +127,10 @@ function ensureRanges() {
       }
     }
   }
+}
+function ensureEntityValues(project) {
+  for (const stage of project.stages || []) if (!stage.value) stage.value = stage.id;
+  for (const participant of project.participants || []) if (!participant.value) participant.value = participant.id;
 }
 function normalizeQuestionOptions(project) {
   for (const question of project.questions || []) {
@@ -388,28 +394,22 @@ function renderAdmin(projectIdToOpen = null) {
     node.querySelector(".project-description").value = project.description || "";
 
     const stagesList = node.querySelector(".stages-list");
-    project.stages.forEach((s, index) => stagesList.appendChild(renderChip(s.label, () => {
+    project.stages.forEach((s, index) => stagesList.appendChild(renderEntityChip(s.label, () => {
       project.stages = project.stages.filter((x) => x.id !== s.id);
       delete project.ranges[s.id];
       saveConfig(); refresh();
     }, (v) => {
       s.label = v; saveConfig(); renderQuestionnaire();
-    }, index, "Déplacer étape")));
-    attachDragAndDropReorder(stagesList, project.stages, () => {
-      saveConfig(); refresh();
-    });
+    }, () => { moveItem(project.stages, index, -1); saveConfig(); renderAdmin(project.id); }, () => { moveItem(project.stages, index, 1); saveConfig(); renderAdmin(project.id); })));
 
     const participantsList = node.querySelector(".participants-list");
-    project.participants.forEach((p, index) => participantsList.appendChild(renderChip(p.label, () => {
+    project.participants.forEach((p, index) => participantsList.appendChild(renderEntityChip(p.label, () => {
       project.participants = project.participants.filter((x) => x.id !== p.id);
       for (const stageId of Object.keys(project.ranges || {})) delete project.ranges[stageId][p.id];
       saveConfig(); refresh();
     }, (v) => {
       p.label = v; saveConfig();
-    }, index, "Déplacer participant")));
-    attachDragAndDropReorder(participantsList, project.participants, () => {
-      saveConfig(); refresh();
-    });
+    }, () => { moveItem(project.participants, index, -1); saveConfig(); renderAdmin(project.id); }, () => { moveItem(project.participants, index, 1); saveConfig(); renderAdmin(project.id); })));
 
     const questionsList = node.querySelector(".questions-list");
     project.questions.forEach((q, index) => {
@@ -484,37 +484,20 @@ function renderAdmin(projectIdToOpen = null) {
     });
 
     node.querySelector(".add-stage").addEventListener("click", () => {
-      project.stages.push({ id: crypto.randomUUID(), label: "Nouvelle étape" });
+      const id = crypto.randomUUID();
+      project.stages.push({ id, label: "Nouvelle étape", value: id });
       saveConfig(); refresh();
     });
 
     node.querySelector(".add-participant").addEventListener("click", () => {
-      project.participants.push({ id: crypto.randomUUID(), label: "Nouveau participant" });
+      const id = crypto.randomUUID();
+      project.participants.push({ id, label: "Nouveau participant", value: id });
       saveConfig(); refresh();
     });
 
     node.querySelector(".add-question").addEventListener("click", () => {
       project.questions.push({ id: crypto.randomUUID(), label: "Nouvelle question", type: "number", key: `q_${Date.now()}` });
-      saveConfig(); refresh();
-    });
-
-    node.querySelector(".delete-project").addEventListener("click", () => {
-      const name = project.name || "Projet sans nom";
-      if (!confirm(`Supprimer définitivement « ${name} » ?`)) return;
-      saveUndoState(`suppression de ${name}`);
-      state.projectTypes = state.projectTypes.filter((p) => p.id !== project.id);
-      saveConfig(); refresh();
-      showToast(`Projet « ${name} » supprimé.`, "Annuler", restoreUndoState);
-    });
-
-    node.querySelector(".duplicate-project").addEventListener("click", () => {
-      const duplicated = duplicateProject(project);
-      state.projectTypes.push(duplicated);
-      saveConfig();
-      refresh();
-      els.projectSelect.value = duplicated.id;
-      renderQuestionnaire();
-      showToast(`Projet « ${project.name} » dupliqué.`);
+      saveConfig(); renderAdmin(project.id);
     });
 
     node.querySelector(".project-name").addEventListener("input", (e) => {
@@ -531,7 +514,7 @@ function renderAdmin(projectIdToOpen = null) {
     renderRulesTable(node, project);
     renderModifiersEditor(node, project);
     renderProjectSummary(node, project);
-    initWizard(node, wizardSections, stepBar);
+    initWizard(node, wizardSections, stepBar, project.id);
     els.adminProjects.appendChild(node);
   });
 }
@@ -550,8 +533,8 @@ function closeProjectEditor() {
   els.adminProjects.innerHTML = "";
 }
 
-function initWizard(node, sections, stepBar) {
-  let currentStep = 0;
+function initWizard(node, sections, stepBar, projectId) {
+  let currentStep = editorStepByProjectId.get(projectId) || 0;
   stepBar.innerHTML = "";
   sections.forEach((section, idx) => {
     const stepBtn = document.createElement("button");
@@ -565,6 +548,7 @@ function initWizard(node, sections, stepBar) {
 
   const showStep = (stepIdx) => {
     currentStep = Math.min(Math.max(stepIdx, 0), sections.length - 1);
+    if (projectId) editorStepByProjectId.set(projectId, currentStep);
     sections.forEach((section, idx) => section.classList.toggle("active-step", idx === currentStep));
     stepBar.querySelectorAll(".wizard-step-btn").forEach((btn, idx) => btn.classList.toggle("active", idx === currentStep));
     prevBtn.disabled = currentStep === 0;
@@ -581,7 +565,7 @@ function initWizard(node, sections, stepBar) {
     }
     showStep(currentStep + 1);
   });
-  showStep(0);
+  showStep(currentStep);
 }
 
 function renderModifiersEditor(node, project) {
@@ -882,53 +866,21 @@ function moveItem(list, index, direction) {
   list.splice(next, 0, item);
 }
 
-function renderChip(value, onDelete, onEdit, index, dragLabel) {
+function renderEntityChip(value, onDelete, onEdit, onUp, onDown) {
   const div = document.createElement("div");
   div.className = "chip";
-  div.dataset.draggableIndex = String(index);
-  div.draggable = true;
-  const input = document.createElement("input");
-  input.value = value;
-  input.addEventListener("input", () => onEdit(input.value));
-  const handle = document.createElement("span");
-  handle.className = "drag-handle";
-  handle.title = `${dragLabel} (glisser-déposer)`;
-  handle.textContent = "↕";
-  const btn = document.createElement("button");
-  btn.textContent = "✕";
-  btn.addEventListener("click", onDelete);
-  div.append(input, handle, btn);
+  div.innerHTML = `
+    <div class="question-fields">
+      <input value="${value}" placeholder="Libellé" />
+      <small class="muted">Valeur technique interne (non visible côté utilisateur).</small>
+    </div>
+    <div class="row-actions"><button type="button" class="btn small move-up" title="Monter">↑</button><button type="button" class="btn small move-down" title="Descendre">↓</button><button title="Supprimer">✕</button></div>
+  `;
+  div.querySelector("input").addEventListener("input", (e) => onEdit(e.target.value));
+  div.querySelector(".move-up").addEventListener("click", onUp);
+  div.querySelector(".move-down").addEventListener("click", onDown);
+  div.querySelector(".row-actions button:last-child").addEventListener("click", onDelete);
   return div;
-}
-
-function attachDragAndDropReorder(container, list, onReorder) {
-  let draggedIndex = null;
-  container.querySelectorAll("[data-draggable-index]").forEach((item) => {
-    const getIndex = () => Number(item.dataset.draggableIndex);
-    item.addEventListener("dragstart", () => {
-      draggedIndex = getIndex();
-      item.classList.add("is-dragging");
-    });
-    item.addEventListener("dragend", () => {
-      draggedIndex = null;
-      item.classList.remove("is-dragging");
-      container.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
-    });
-    item.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      item.classList.add("drag-over");
-    });
-    item.addEventListener("dragleave", () => item.classList.remove("drag-over"));
-    item.addEventListener("drop", (e) => {
-      e.preventDefault();
-      item.classList.remove("drag-over");
-      const targetIndex = getIndex();
-      if (draggedIndex === null || targetIndex === draggedIndex) return;
-      const [moved] = list.splice(draggedIndex, 1);
-      list.splice(targetIndex, 0, moved);
-      onReorder();
-    });
-  });
 }
 
 els.projectSelect.addEventListener("change", renderQuestionnaire);
@@ -940,8 +892,8 @@ els.addProjectBtn.addEventListener("click", () => {
     id: crypto.randomUUID(),
     name: "Nouveau projet",
     description: "",
-    stages: [{ id: crypto.randomUUID(), label: "Étape 1" }],
-    participants: [{ id: crypto.randomUUID(), label: "Participant 1" }],
+    stages: (() => { const id = crypto.randomUUID(); return [{ id, label: "Étape 1", value: id }]; })(),
+    participants: (() => { const id = crypto.randomUUID(); return [{ id, label: "Participant 1", value: id }]; })(),
     questions: [{ id: crypto.randomUUID(), label: "Durée (minutes)", type: "number", key: "duration" }],
     ranges: {},
     modifiers: []
