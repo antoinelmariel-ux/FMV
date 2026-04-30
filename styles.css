@@ -225,3 +225,20 @@ footer {
   .card { border: 0; background: white; padding: 0; }
   #userSpace { display: block !important; }
 }
+
+.projects-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:6px}
+.project-card{padding:14px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--soft-shadow);display:grid;gap:8px}
+.project-card h3{margin:0}
+.project-card .meta{font-size:.86rem;color:var(--muted)}
+.project-card .actions{display:flex;gap:8px;flex-wrap:wrap}
+.icon-btn{display:inline-flex;align-items:center;gap:6px}
+#adminProjects{margin-top:14px}
+.question-type-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.choice-options-editor{display:grid;gap:6px;padding:8px;background:#f4f8ff;border:1px dashed var(--border);border-radius:10px}
+.choice-option-row{display:grid;grid-template-columns:1fr auto;gap:6px}
+.expected-values-wrap{display:grid;gap:6px}
+.expected-values{display:flex;flex-wrap:wrap;gap:6px}
+.expected-pill{background:#eaf2ff;border:1px solid #bfd7ff;border-radius:999px;padding:4px 10px;font-size:.82rem}
+.effect-participant{display:none}
+.effect-row-break{grid-column:1/-1;border-top:1px dashed var(--border);margin-top:2px;padding-top:6px}
+.modifier-row{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}

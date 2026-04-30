@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.7.0";
 let undoSnapshot = null;
 
 const defaultConfig = {
@@ -87,6 +87,7 @@ const els = {
   calculateBtn: document.getElementById("calculateBtn"),
   reportOutput: document.getElementById("reportOutput"),
   exportPdfBtn: document.getElementById("exportPdfBtn"),
+  adminProjectsOverview: document.getElementById("adminProjectsOverview"),
   adminProjects: document.getElementById("adminProjects"),
   addProjectBtn: document.getElementById("addProjectBtn"),
   saveLocalBtn: document.getElementById("saveLocalBtn"),
@@ -210,7 +211,8 @@ function renderQuestionnaire() {
     .map((q) => {
       if (q.type === "select") {
         const opts = (q.options || []).map((o) => `<option value="${o}">${o}</option>`).join("");
-        return `<label>${q.label}<select name="${q.key}">${opts}</select></label>`;
+        const multiple = q.selectionMode === "multiple" ? " multiple" : "";
+        return `<label>${q.label}<select name="${q.key}"${multiple}>${opts}</select></label>`;
       }
       return `<label>${q.label}<input type="number" step="0.1" name="${q.key}" value="0"/></label>`;
     })
@@ -220,7 +222,9 @@ function renderQuestionnaire() {
 function evaluateModifier(mod, answers) {
   const actual = answers[mod.questionKey];
   if (mod.operator === ">") return Number(actual) > Number(mod.expectedValue);
-  return String(actual) === String(mod.expectedValue);
+  const expectedValues = Array.isArray(mod.expectedValues) ? mod.expectedValues : [mod.expectedValue];
+  if (Array.isArray(actual)) return actual.some((v) => expectedValues.map(String).includes(String(v)));
+  return expectedValues.map(String).includes(String(actual));
 }
 
 function computeRecommendation() {
@@ -232,7 +236,7 @@ function computeRecommendation() {
 
   let globalMultiplier = 1;
   const triggered = [];
-  const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [] }]));
+  const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [], hiddenParticipants: new Set() }]));
 
   const resolveStageId = (mod) =>
     mod.stageId || project.stages.find((s) => s.label === mod.stageRef)?.id;
@@ -250,6 +254,9 @@ function computeRecommendation() {
         if (effect === "excludeStage") {
           stageState.excluded = true;
         } else if (effect === "commentStage") {
+          // commentaire uniquement
+        } else if (effect === "toggleParticipant") {
+          if (mod.participantId) stageState.hiddenParticipants.add(mod.participantId);
           // commentaire uniquement, sans impact horaire
         } else {
           stageState.multiplier *= Number(mod.multiplier || 1);
@@ -281,6 +288,7 @@ function computeRecommendation() {
 
     let rows = "";
     for (const participant of project.participants) {
+      if (stageState.hiddenParticipants?.has(participant.id)) { rows += `<tr><td>${participant.label}</td><td colspan="3">Participant masqué selon les règles.</td></tr>`; continue; }
       const base = project.ranges?.[stage.id]?.[participant.id] || { min: 0, max: 0, note: "" };
       const effectiveMultiplier = globalMultiplier * stageState.multiplier;
       const min = round1(Number(base.min) * effectiveMultiplier);
@@ -318,11 +326,52 @@ function round1(n) {
   return Math.round(n * 10) / 10;
 }
 
-function renderAdmin() {
+
+function getQuestionModeLabel(question) {
+  if (question.type !== "select") return "Nombre";
+  return question.selectionMode === "multiple" ? "Choix multiple" : "Choix unique";
+}
+
+function renderProjectCards() {
+  els.adminProjectsOverview.innerHTML = "";
+  state.projectTypes.forEach((project) => {
+    const card = document.createElement("article");
+    card.className = "project-card";
+    card.innerHTML = `
+      <h3>${project.name || "Projet sans nom"}</h3>
+      <p class="muted">${project.description || "Aucune description."}</p>
+      <p class="meta">${project.stages.length} étape(s) · ${project.participants.length} participant(s) · ${project.questions.length} question(s)</p>
+      <div class="actions">
+        <button class="btn icon-btn edit-project">✏️ Modifier</button>
+        <button class="btn icon-btn duplicate-project">📄 Dupliquer</button>
+        <button class="btn danger icon-btn delete-project">🗑️ Supprimer</button>
+      </div>
+    `;
+    card.querySelector('.edit-project').addEventListener('click',()=>{
+      renderAdmin(project.id);
+      const detail = els.adminProjects.querySelector('[data-project-id="'+project.id+'"]');
+      detail?.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+    card.querySelector('.duplicate-project').addEventListener('click',()=>{
+      const duplicated=duplicateProject(project); state.projectTypes.push(duplicated); saveConfig(); refresh();
+      showToast(`Projet « ${project.name} » dupliqué.`);
+    });
+    card.querySelector('.delete-project').addEventListener('click',()=>{
+      const name = project.name || "Projet sans nom";
+      if (!confirm(`Supprimer définitivement « ${name} » ?`)) return;
+      state.projectTypes = state.projectTypes.filter((p) => p.id !== project.id); saveConfig(); refresh();
+    });
+    els.adminProjectsOverview.appendChild(card);
+  });
+}
+
+function renderAdmin(projectIdToOpen = null) {
+  renderProjectCards();
   els.adminProjects.innerHTML = "";
 
   state.projectTypes.forEach((project) => {
     const node = els.projectBlockTemplate.content.firstElementChild.cloneNode(true);
+    node.dataset.projectId = project.id;
     const wizardSections = Array.from(node.querySelectorAll(".wizard-section"));
     const stepBar = node.querySelector(".wizard-steps");
     node.querySelector(".project-name").value = project.name;
@@ -361,21 +410,34 @@ function renderAdmin() {
       wrapper.innerHTML = `
         <div class="question-fields">
           <input value="${q.label}" />
-          <select>
-            <option value="number" ${q.type === "number" ? "selected" : ""}>Nombre</option>
-            <option value="select" ${q.type === "select" ? "selected" : ""}>Choix</option>
-          </select>
-          <input class="question-options-input" value="${(q.options || []).join("; ")}" placeholder="Options séparées par ;" />
+          <div class="question-type-wrap">
+            <select class="question-type">
+              <option value="number" ${q.type === "number" ? "selected" : ""}>Nombre</option>
+              <option value="select" ${q.type === "select" ? "selected" : ""}>Choix</option>
+            </select>
+            <select class="selection-mode">
+              <option value="single" ${(q.selectionMode || "single") === "single" ? "selected" : ""}>Choix unique</option>
+              <option value="multiple" ${q.selectionMode === "multiple" ? "selected" : ""}>Choix multiple</option>
+            </select>
+          </div>
+          <div class="choice-options-editor">
+            <input class="question-options-input" value="${(q.options || []).join("; ")}" placeholder="Options séparées par ;" />
+          </div>
         </div>
         <span class="drag-handle" title="Glisser-déposer pour réordonner">↕</span>
         <button title="Supprimer">✕</button>
       `;
-      const [labelInput, typeInput, optionsInput] = wrapper.querySelectorAll("input,select");
+      const labelInput = wrapper.querySelector("input");
+      const typeInput = wrapper.querySelector(".question-type");
+      const modeInput = wrapper.querySelector(".selection-mode");
+      const optionsInput = wrapper.querySelector(".question-options-input");
       const toggleOptionsInput = () => {
         const isNumber = typeInput.value === "number";
-        optionsInput.style.display = isNumber ? "none" : "block";
+        wrapper.querySelector(".selection-mode").style.display = isNumber ? "none" : "block";
+        wrapper.querySelector(".choice-options-editor").style.display = isNumber ? "none" : "grid";
       };
       labelInput.addEventListener("input", () => { q.label = labelInput.value; saveConfig(); renderQuestionnaire(); });
+      modeInput.addEventListener("change", () => { q.selectionMode = modeInput.value; saveConfig(); renderQuestionnaire(); });
       typeInput.addEventListener("change", () => {
         q.type = typeInput.value;
         if (q.type === "number") q.options = [];
@@ -514,6 +576,7 @@ function renderModifiersEditor(node, project) {
       </label>
       <label>Valeur attendue
         <input data-k="expectedValue" value="${mod.expectedValue ?? ""}" />
+        <div class="expected-values"></div>
       </label>
       <label>Portée
         <select data-k="scope">
@@ -526,6 +589,7 @@ function renderModifiersEditor(node, project) {
           <option value="multiply" ${(mod.effect || "multiply") === "multiply" ? "selected" : ""}>Multiplier min/max</option>
           <option value="excludeStage" ${(mod.effect || "multiply") === "excludeStage" ? "selected" : ""}>Retirer l'étape</option>
           <option value="commentStage" ${(mod.effect || "multiply") === "commentStage" ? "selected" : ""}>Afficher un commentaire d'étape</option>
+          <option value="toggleParticipant" ${(mod.effect || "multiply") === "toggleParticipant" ? "selected" : ""}>Afficher / masquer participant</option>
         </select>
       </label>
       <label class="multiplier-field">Coefficient
@@ -537,7 +601,10 @@ function renderModifiersEditor(node, project) {
           ${stageOptions}
         </select>
       </label>
-      <label>Note visible côté utilisateur
+      <label class="effect-participant">Participant cible
+        <select data-k="participantId"><option value="">Choisir un participant</option>${(project.participants||[]).map(p=>`<option value="${p.id}">${p.label}</option>`).join("")}</select>
+      </label>
+      <label class="effect-row-break">Note visible côté utilisateur
         <input data-k="note" value="${mod.note || ""}" />
       </label>
       <button class="btn danger delete-modifier">Supprimer</button>
@@ -553,6 +620,7 @@ function renderModifiersEditor(node, project) {
     const stageSelect = row.querySelector('[data-k="stageId"]');
     const multiplierField = row.querySelector(".multiplier-field");
     const stageField = row.querySelector(".stage-field");
+    const participantField = row.querySelector(".effect-participant");
 
     qSelect.value = mod.questionKey || project.questions?.[0]?.key || "";
     opSelect.value = mod.operator === ">" ? ">" : "=";
@@ -565,6 +633,7 @@ function renderModifiersEditor(node, project) {
       const isExclude = effectSelect.value === "excludeStage";
       const isCommentOnly = effectSelect.value === "commentStage";
       stageField.style.display = isStageScope ? "grid" : "none";
+      participantField.style.display = effectSelect.value === "toggleParticipant" ? "grid" : "none";
       multiplierField.style.display = (isExclude || isCommentOnly) ? "none" : "grid";
     };
 
@@ -580,6 +649,8 @@ function renderModifiersEditor(node, project) {
       mod.effect = effectSelect.value;
       mod.multiplier = Number(multiplierInput.value || 1);
       mod.stageId = stageSelect.value || undefined;
+      mod.participantId = row.querySelector("[data-k=\"participantId\"]")?.value || undefined;
+      mod.expectedValues = String(expectedInput.value||"").split(";").map(v=>v.trim()).filter(Boolean);
       mod.note = row.querySelector('[data-k="note"]').value;
       saveConfig();
     };
