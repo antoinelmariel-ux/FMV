@@ -45,14 +45,7 @@
         </section>
 
         <section id="adminSpace" class="panel">
-          <div class="card admin-intro">
-            <h2>Configuration assistée du back-office</h2>
-            <p class="muted">Prenez votre temps : complétez les blocs un par un, comme un formulaire guidé.</p>
-            <ul class="helper-list">
-              <li>🧩 Commencez par le nom du projet.</li>
-              <li>👥 Ajoutez ensuite étapes, participants et questions.</li>
-              <li>💾 Sauvegardez quand vous voulez, vous pouvez reprendre plus tard.</li>
-            </ul>
+          <div class="card admin-toolbar">
             <div class="row wrap">
               <button id="addProjectBtn" class="btn primary">+ Nouveau type de projet</button>
               <button id="saveLocalBtn" class="btn">Sauvegarder en local</button>
@@ -66,13 +59,12 @@
           </div>
 
           <div id="adminProjectsOverview" class="projects-overview"></div>
-          <div id="adminProjects"></div>
         </section>
       </main>
 
       <footer>
         <span>FMV Planner — Local only (JSON + LocalStorage)</span>
-        <span id="versionBadge">Version v1.7.0</span>
+        <span id="versionBadge">Version v1.8.0</span>
       </footer>
     </div>
 
@@ -131,6 +123,17 @@
         </div>
       </article>
     </template>
+
+    <div id="projectEditorModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal></div>
+      <div class="modal-content card">
+        <div class="row between align-center">
+          <h2>Édition du projet</h2>
+          <button id="closeProjectEditorBtn" class="btn">Fermer</button>
+        </div>
+        <div id="adminProjects"></div>
+      </div>
+    </div>
 
     <script src="app.js"></script>
   </body>

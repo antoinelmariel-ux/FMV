@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.7.0";
+const APP_VERSION = "1.8.0";
 let undoSnapshot = null;
 
 const defaultConfig = {
@@ -95,7 +95,9 @@ const els = {
   exportJsonBtn: document.getElementById("exportJsonBtn"),
   importJsonInput: document.getElementById("importJsonInput"),
   projectBlockTemplate: document.getElementById("projectBlockTemplate"),
-  versionBadge: document.getElementById("versionBadge")
+  versionBadge: document.getElementById("versionBadge"),
+  projectEditorModal: document.getElementById("projectEditorModal"),
+  closeProjectEditorBtn: document.getElementById("closeProjectEditorBtn")
 };
 
 function loadConfig() {
@@ -348,9 +350,7 @@ function renderProjectCards() {
       </div>
     `;
     card.querySelector('.edit-project').addEventListener('click',()=>{
-      renderAdmin(project.id);
-      const detail = els.adminProjects.querySelector('[data-project-id="'+project.id+'"]');
-      detail?.scrollIntoView({behavior:'smooth',block:'start'});
+      openProjectEditor(project.id);
     });
     card.querySelector('.duplicate-project').addEventListener('click',()=>{
       const duplicated=duplicateProject(project); state.projectTypes.push(duplicated); saveConfig(); refresh();
@@ -369,7 +369,7 @@ function renderAdmin(projectIdToOpen = null) {
   renderProjectCards();
   els.adminProjects.innerHTML = "";
 
-  state.projectTypes.forEach((project) => {
+  state.projectTypes.filter((p) => !projectIdToOpen || p.id === projectIdToOpen).forEach((project) => {
     const node = els.projectBlockTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.projectId = project.id;
     const wizardSections = Array.from(node.querySelectorAll(".wizard-section"));
@@ -421,7 +421,8 @@ function renderAdmin(projectIdToOpen = null) {
             </select>
           </div>
           <div class="choice-options-editor">
-            <input class="question-options-input" value="${(q.options || []).join("; ")}" placeholder="Options séparées par ;" />
+            <div class="choice-option-list"></div>
+            <button type="button" class="btn small add-option">+ Ajouter un choix</button>
           </div>
         </div>
         <span class="drag-handle" title="Glisser-déposer pour réordonner">↕</span>
@@ -430,12 +431,29 @@ function renderAdmin(projectIdToOpen = null) {
       const labelInput = wrapper.querySelector("input");
       const typeInput = wrapper.querySelector(".question-type");
       const modeInput = wrapper.querySelector(".selection-mode");
-      const optionsInput = wrapper.querySelector(".question-options-input");
       const toggleOptionsInput = () => {
         const isNumber = typeInput.value === "number";
         wrapper.querySelector(".selection-mode").style.display = isNumber ? "none" : "block";
         wrapper.querySelector(".choice-options-editor").style.display = isNumber ? "none" : "grid";
       };
+      const optionList = wrapper.querySelector(".choice-option-list");
+      const renderOptions = () => {
+        optionList.innerHTML = "";
+        (q.options || []).forEach((opt, optIndex) => {
+          const row = document.createElement("div");
+          row.className = "choice-option-row";
+          row.innerHTML = `<input value="${opt}" placeholder="Choix" /><button type="button" class="btn danger small">✕</button>`;
+          row.querySelector("input").addEventListener("input", (e) => { q.options[optIndex] = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
+          row.querySelector("button").addEventListener("click", () => { q.options.splice(optIndex, 1); saveConfig(); renderQuestionnaire(); renderOptions(); renderModifiersEditor(node, project); });
+          optionList.appendChild(row);
+        });
+      };
+      wrapper.querySelector(".add-option").addEventListener("click", () => {
+        q.options ||= [];
+        q.options.push(`Choix ${(q.options.length || 0) + 1}`);
+        saveConfig(); renderQuestionnaire(); renderOptions(); renderModifiersEditor(node, project);
+      });
+      renderOptions();
       labelInput.addEventListener("input", () => { q.label = labelInput.value; saveConfig(); renderQuestionnaire(); });
       modeInput.addEventListener("change", () => { q.selectionMode = modeInput.value; saveConfig(); renderQuestionnaire(); });
       typeInput.addEventListener("change", () => {
@@ -444,10 +462,6 @@ function renderAdmin(projectIdToOpen = null) {
         toggleOptionsInput();
         saveConfig();
         renderQuestionnaire();
-      });
-      optionsInput.addEventListener("input", () => {
-        q.options = optionsInput.value.split(";").map((x) => x.trim()).filter(Boolean);
-        saveConfig(); renderQuestionnaire();
       });
       toggleOptionsInput();
       wrapper.querySelector("button").addEventListener("click", () => {
@@ -513,6 +527,18 @@ function renderAdmin(projectIdToOpen = null) {
   });
 }
 
+function openProjectEditor(projectId) {
+  renderAdmin(projectId);
+  els.projectEditorModal.classList.add("show");
+  els.projectEditorModal.setAttribute("aria-hidden", "false");
+}
+
+function closeProjectEditor() {
+  els.projectEditorModal.classList.remove("show");
+  els.projectEditorModal.setAttribute("aria-hidden", "true");
+  els.adminProjects.innerHTML = "";
+}
+
 function initWizard(node, sections, stepBar) {
   let currentStep = 0;
   stepBar.innerHTML = "";
@@ -560,6 +586,8 @@ function renderModifiersEditor(node, project) {
     .join("");
 
   const previewNode = wrapper.querySelector(".modifier-preview");
+const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key === key);
+  const getQuestionChoices = (question) => question?.type === "select" ? (question.options || []) : [];
 
   (project.modifiers || []).forEach((mod) => {
     const row = document.createElement("div");
@@ -575,7 +603,7 @@ function renderModifiersEditor(node, project) {
         </select>
       </label>
       <label>Valeur attendue
-        <input data-k="expectedValue" value="${mod.expectedValue ?? ""}" />
+        <select data-k="expectedValue"></select>
         <div class="expected-values"></div>
       </label>
       <label>Portée
@@ -614,6 +642,7 @@ function renderModifiersEditor(node, project) {
     const qSelect = row.querySelector('[data-k="questionKey"]');
     const opSelect = row.querySelector('[data-k="operator"]');
     const expectedInput = row.querySelector('[data-k="expectedValue"]');
+    const expectedValuesNode = row.querySelector(".expected-values");
     const scopeSelect = row.querySelector('[data-k="scope"]');
     const effectSelect = row.querySelector('[data-k="effect"]');
     const multiplierInput = row.querySelector('[data-k="multiplier"]');
@@ -627,6 +656,21 @@ function renderModifiersEditor(node, project) {
     scopeSelect.value = mod.scope === "stage" ? "stage" : "global";
     effectSelect.value = mod.effect || "multiply";
     stageSelect.value = mod.stageId || project.stages?.find((s) => s.label === mod.stageRef)?.id || "";
+
+    const populateExpectedValues = () => {
+      const question = getQuestionByKey(qSelect.value);
+      if (question?.type === "select") {
+        const choices = getQuestionChoices(question);
+        expectedInput.innerHTML = choices.map((c) => `<option value="${c}">${c}</option>`).join("");
+        expectedInput.value = mod.expectedValue || choices[0] || "";
+        expectedInput.style.display = "block";
+        expectedValuesNode.innerHTML = "";
+      } else {
+        expectedInput.innerHTML = `<option value="${mod.expectedValue ?? 0}">${mod.expectedValue ?? 0}</option>`;
+        expectedInput.value = String(mod.expectedValue ?? 0);
+        expectedInput.style.display = "block";
+      }
+    };
 
     const syncUi = () => {
       const isStageScope = scopeSelect.value === "stage";
@@ -650,14 +694,15 @@ function renderModifiersEditor(node, project) {
       mod.multiplier = Number(multiplierInput.value || 1);
       mod.stageId = stageSelect.value || undefined;
       mod.participantId = row.querySelector("[data-k=\"participantId\"]")?.value || undefined;
-      mod.expectedValues = String(expectedInput.value||"").split(";").map(v=>v.trim()).filter(Boolean);
+      mod.expectedValues = [expectedInput.value].filter(Boolean);
       mod.note = row.querySelector('[data-k="note"]').value;
       saveConfig();
     };
 
     controls.forEach((ctrl) => ctrl.addEventListener("input", normalizeAndSave));
     controls.forEach((ctrl) => ctrl.addEventListener("change", () => {
-      syncUi();
+      populateExpectedValues();
+    syncUi();
       normalizeAndSave();
     }));
 
@@ -667,6 +712,7 @@ function renderModifiersEditor(node, project) {
       refresh();
     });
 
+    populateExpectedValues();
     syncUi();
     listNode.appendChild(row);
   });
@@ -911,3 +957,7 @@ els.importJsonInput.addEventListener("change", async (e) => {
 });
 
 refresh();
+
+
+els.closeProjectEditorBtn?.addEventListener("click", closeProjectEditor);
+els.projectEditorModal?.addEventListener("click", (e) => { if (e.target.hasAttribute("data-close-modal")) closeProjectEditor(); });
