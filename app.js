@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.12.0";
+const APP_VERSION = "1.13.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -335,8 +335,6 @@ function computeRecommendation() {
   els.reportOutput.innerHTML = `
     <div class="report-grid">
       <p><strong>Projet:</strong> ${project.name}</p>
-      <p><strong>Facteur global appliqué:</strong> x${round1(globalMultiplier)}</p>
-      <p><strong>Hypothèses:</strong> ${triggered.length ? triggered.join(" · ") : "Aucun modificateur"}</p>
       ${sections.join("")}
       <table>
         <thead><tr><th>Total recommandé</th><th>Min global</th><th>Max global</th></tr></thead>
