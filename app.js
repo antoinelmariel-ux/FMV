@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.16.0";
+const APP_VERSION = "1.17.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -344,18 +344,12 @@ function computeRecommendation() {
   for (const stage of project.stages) {
     const stageState = stageEffects.get(stage.id) || { multiplier: 1, excluded: false, notes: [] };
     if (stageState.excluded) {
-      sections.push(`
-        <div>
-          <h3 class="stage-title">${stage.label}</h3>
-          <p>Étape non requise selon vos réponses.</p>
-        </div>
-      `);
       continue;
     }
 
     let rows = "";
     for (const participant of project.participants) {
-      if (stageState.hiddenParticipants?.has(participant.id)) { rows += `<tr><td>${participant.label}</td><td colspan="3">Participant masqué selon les règles.</td></tr>`; continue; }
+      if (stageState.hiddenParticipants?.has(participant.id)) continue;
       const base = project.ranges?.[stage.id]?.[participant.id] || { min: 0, max: 0, note: "" };
       const effectiveMultiplier = globalMultiplier * stageState.multiplier;
       const min = round1(Number(base.min) * effectiveMultiplier);
