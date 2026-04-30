@@ -1,6 +1,7 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.10.0";
 let undoSnapshot = null;
+let activeEditorProjectId = null;
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -146,7 +147,7 @@ function refresh() {
   ensureRanges();
   renderProjectSelect();
   renderQuestionnaire();
-  renderAdmin();
+  renderAdmin(activeEditorProjectId);
   els.versionBadge.textContent = `Version v${state.version || APP_VERSION}`;
 }
 
@@ -414,8 +415,6 @@ function renderAdmin(projectIdToOpen = null) {
     project.questions.forEach((q, index) => {
       const wrapper = document.createElement("div");
       wrapper.className = "chip";
-      wrapper.dataset.draggableIndex = String(index);
-      wrapper.draggable = true;
       wrapper.innerHTML = `
         <div class="question-fields">
           <input value="${q.label}" />
@@ -434,8 +433,7 @@ function renderAdmin(projectIdToOpen = null) {
             <button type="button" class="btn small add-option">+ Ajouter un choix</button>
           </div>
         </div>
-        <span class="drag-handle" title="Glisser-déposer pour réordonner">↕</span>
-        <button class="delete-question" title="Supprimer">✕</button>
+        <div class="row-actions"><button type="button" class="btn small question-up" title="Monter">↑</button><button type="button" class="btn small question-down" title="Descendre">↓</button><button class="delete-question" title="Supprimer">✕</button></div>
       `;
       const labelInput = wrapper.querySelector("input");
       const typeInput = wrapper.querySelector(".question-type");
@@ -451,15 +449,14 @@ function renderAdmin(projectIdToOpen = null) {
         (q.options || []).forEach((opt, optIndex) => {
           const row = document.createElement("div");
           row.className = "choice-option-row";
-          row.dataset.draggableIndex = String(optIndex);
-          row.draggable = true;
-          row.innerHTML = `<input value="${opt.label}" placeholder="Libellé" /><input value="${opt.value}" placeholder="Valeur (interne)" /><span class="drag-handle">↕</span><button type="button" class="btn danger small">✕</button>`;
+          row.innerHTML = `<input value="${opt.label}" placeholder="Libellé" /><input value="${opt.value}" placeholder="Valeur (interne)" /><div class="row-actions"><button type="button" class="btn small move-up" title="Monter">↑</button><button type="button" class="btn small move-down" title="Descendre">↓</button><button type="button" class="btn danger small">✕</button></div>`;
           row.querySelectorAll("input")[0].addEventListener("input", (e) => { q.options[optIndex].label = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
           row.querySelectorAll("input")[1].addEventListener("input", (e) => { q.options[optIndex].value = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
-          row.querySelector("button").addEventListener("click", () => { q.options.splice(optIndex, 1); saveConfig(); renderQuestionnaire(); renderOptions(); renderModifiersEditor(node, project); });
+          row.querySelector(".move-up").addEventListener("click", () => { moveItem(q.options, optIndex, -1); saveConfig(); renderOptions(); renderQuestionnaire(); renderModifiersEditor(node, project); });
+          row.querySelector(".move-down").addEventListener("click", () => { moveItem(q.options, optIndex, 1); saveConfig(); renderOptions(); renderQuestionnaire(); renderModifiersEditor(node, project); });
+          row.querySelector(".btn.danger").addEventListener("click", () => { q.options.splice(optIndex, 1); saveConfig(); renderQuestionnaire(); renderOptions(); renderModifiersEditor(node, project); });
           optionList.appendChild(row);
         });
-        attachDragAndDropReorder(optionList, q.options, () => { saveConfig(); renderOptions(); renderQuestionnaire(); renderModifiersEditor(node, project); });
       };
       wrapper.querySelector(".add-option").addEventListener("click", () => {
         q.options ||= [];
@@ -477,14 +474,13 @@ function renderAdmin(projectIdToOpen = null) {
         renderQuestionnaire();
       });
       toggleOptionsInput();
+      wrapper.querySelector(".question-up").addEventListener("click", () => { moveItem(project.questions, index, -1); saveConfig(); refresh(); });
+      wrapper.querySelector(".question-down").addEventListener("click", () => { moveItem(project.questions, index, 1); saveConfig(); refresh(); });
       wrapper.querySelector(".delete-question").addEventListener("click", () => {
         project.questions = project.questions.filter((x) => x.id !== q.id);
         saveConfig(); refresh();
       });
       questionsList.appendChild(wrapper);
-    });
-    attachDragAndDropReorder(questionsList, project.questions, () => {
-      saveConfig(); refresh();
     });
 
     node.querySelector(".add-stage").addEventListener("click", () => {
@@ -541,12 +537,14 @@ function renderAdmin(projectIdToOpen = null) {
 }
 
 function openProjectEditor(projectId) {
+  activeEditorProjectId = projectId;
   renderAdmin(projectId);
   els.projectEditorModal.classList.add("show");
   els.projectEditorModal.setAttribute("aria-hidden", "false");
 }
 
 function closeProjectEditor() {
+  activeEditorProjectId = null;
   els.projectEditorModal.classList.remove("show");
   els.projectEditorModal.setAttribute("aria-hidden", "true");
   els.adminProjects.innerHTML = "";
@@ -874,6 +872,14 @@ function renderRulesTable(node, project) {
     }
     tableBody.appendChild(tr);
   }
+}
+
+
+function moveItem(list, index, direction) {
+  const next = index + direction;
+  if (next < 0 || next >= list.length) return;
+  const [item] = list.splice(index, 1);
+  list.splice(next, 0, item);
 }
 
 function renderChip(value, onDelete, onEdit, index, dragLabel) {
