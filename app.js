@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.17.0";
+const APP_VERSION = "1.18.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -340,6 +340,7 @@ function computeRecommendation() {
   const sections = [];
   let globalMin = 0;
   let globalMax = 0;
+  const totalsByParticipant = new Map(project.participants.map((p) => [p.id, { label: p.label, min: 0, max: 0 }]));
 
   for (const stage of project.stages) {
     const stageState = stageEffects.get(stage.id) || { multiplier: 1, excluded: false, notes: [] };
@@ -356,6 +357,11 @@ function computeRecommendation() {
       const max = round1(Number(base.max) * effectiveMultiplier);
       globalMin += min;
       globalMax += max;
+      const participantTotals = totalsByParticipant.get(participant.id);
+      if (participantTotals) {
+        participantTotals.min += min;
+        participantTotals.max += max;
+      }
       const justificationParts = [];
       if (base.note) justificationParts.push(base.note);
       if (stageState.notes.length) justificationParts.push(`Modificateurs: ${stageState.notes.join(" · ")}`);
@@ -376,13 +382,18 @@ function computeRecommendation() {
     `);
   }
 
+  const totalRows = Array.from(totalsByParticipant.values())
+    .filter((totals) => totals.min > 0 || totals.max > 0)
+    .map((totals) => `<tr><td>${totals.label}</td><td>${round1(totals.min)} h</td><td>${round1(totals.max)} h</td></tr>`)
+    .join("");
+
   els.reportOutput.innerHTML = `
     <div class="report-grid">
       <p><strong>Projet:</strong> ${project.name}</p>
       ${sections.join("")}
       <table>
-        <thead><tr><th>Total recommandé</th><th>Min global</th><th>Max global</th></tr></thead>
-        <tbody><tr><td>Temps de travail</td><td>${round1(globalMin)} h</td><td>${round1(globalMax)} h</td></tr></tbody>
+        <thead><tr><th>Total recommandé</th><th>Min total</th><th>Max total</th></tr></thead>
+        <tbody>${totalRows || `<tr><td>—</td><td>${round1(globalMin)} h</td><td>${round1(globalMax)} h</td></tr>`}</tbody>
       </table>
     </div>`;
 }
