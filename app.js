@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.8.0";
+const APP_VERSION = "1.9.0";
 let undoSnapshot = null;
 
 const defaultConfig = {
@@ -90,7 +90,6 @@ const els = {
   adminProjectsOverview: document.getElementById("adminProjectsOverview"),
   adminProjects: document.getElementById("adminProjects"),
   addProjectBtn: document.getElementById("addProjectBtn"),
-  saveLocalBtn: document.getElementById("saveLocalBtn"),
   resetBtn: document.getElementById("resetBtn"),
   exportJsonBtn: document.getElementById("exportJsonBtn"),
   importJsonInput: document.getElementById("importJsonInput"),
@@ -116,6 +115,7 @@ function saveConfig() {
 function ensureRanges() {
   for (const project of state.projectTypes) {
     ensureQuestionKeys(project);
+    normalizeQuestionOptions(project);
     project.ranges ||= {};
     for (const stage of project.stages) {
       project.ranges[stage.id] ||= {};
@@ -123,6 +123,14 @@ function ensureRanges() {
         project.ranges[stage.id][participant.id] ||= { min: 0, max: 0, note: "" };
       }
     }
+  }
+}
+function normalizeQuestionOptions(project) {
+  for (const question of project.questions || []) {
+    if (question.type !== "select") continue;
+    question.options = (question.options || []).map((opt) =>
+      typeof opt === "string" ? { label: opt, value: opt } : { label: opt.label || "", value: opt.value || "" }
+    );
   }
 }
 
@@ -212,7 +220,7 @@ function renderQuestionnaire() {
   els.questionnaireForm.innerHTML = project.questions
     .map((q) => {
       if (q.type === "select") {
-        const opts = (q.options || []).map((o) => `<option value="${o}">${o}</option>`).join("");
+        const opts = (q.options || []).map((o) => `<option value="${o.value}">${o.label}</option>`).join("");
         const multiple = q.selectionMode === "multiple" ? " multiple" : "";
         return `<label>${q.label}<select name="${q.key}"${multiple}>${opts}</select></label>`;
       }
@@ -258,7 +266,8 @@ function computeRecommendation() {
         } else if (effect === "commentStage") {
           // commentaire uniquement
         } else if (effect === "toggleParticipant") {
-          if (mod.participantId) stageState.hiddenParticipants.add(mod.participantId);
+          const ids = Array.isArray(mod.participantIds) ? mod.participantIds : [mod.participantId].filter(Boolean);
+          ids.forEach((id) => stageState.hiddenParticipants.add(id));
           // commentaire uniquement, sans impact horaire
         } else {
           stageState.multiplier *= Number(mod.multiplier || 1);
@@ -426,7 +435,7 @@ function renderAdmin(projectIdToOpen = null) {
           </div>
         </div>
         <span class="drag-handle" title="Glisser-déposer pour réordonner">↕</span>
-        <button title="Supprimer">✕</button>
+        <button class="delete-question" title="Supprimer">✕</button>
       `;
       const labelInput = wrapper.querySelector("input");
       const typeInput = wrapper.querySelector(".question-type");
@@ -442,15 +451,19 @@ function renderAdmin(projectIdToOpen = null) {
         (q.options || []).forEach((opt, optIndex) => {
           const row = document.createElement("div");
           row.className = "choice-option-row";
-          row.innerHTML = `<input value="${opt}" placeholder="Choix" /><button type="button" class="btn danger small">✕</button>`;
-          row.querySelector("input").addEventListener("input", (e) => { q.options[optIndex] = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
+          row.dataset.draggableIndex = String(optIndex);
+          row.draggable = true;
+          row.innerHTML = `<input value="${opt.label}" placeholder="Libellé" /><input value="${opt.value}" placeholder="Valeur (interne)" /><span class="drag-handle">↕</span><button type="button" class="btn danger small">✕</button>`;
+          row.querySelectorAll("input")[0].addEventListener("input", (e) => { q.options[optIndex].label = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
+          row.querySelectorAll("input")[1].addEventListener("input", (e) => { q.options[optIndex].value = e.target.value; saveConfig(); renderQuestionnaire(); renderModifiersEditor(node, project); });
           row.querySelector("button").addEventListener("click", () => { q.options.splice(optIndex, 1); saveConfig(); renderQuestionnaire(); renderOptions(); renderModifiersEditor(node, project); });
           optionList.appendChild(row);
         });
+        attachDragAndDropReorder(optionList, q.options, () => { saveConfig(); renderOptions(); renderQuestionnaire(); renderModifiersEditor(node, project); });
       };
       wrapper.querySelector(".add-option").addEventListener("click", () => {
         q.options ||= [];
-        q.options.push(`Choix ${(q.options.length || 0) + 1}`);
+        q.options.push({ label: `Choix ${(q.options.length || 0) + 1}`, value: `choix_${(q.options.length || 0) + 1}` });
         saveConfig(); renderQuestionnaire(); renderOptions(); renderModifiersEditor(node, project);
       });
       renderOptions();
@@ -464,7 +477,7 @@ function renderAdmin(projectIdToOpen = null) {
         renderQuestionnaire();
       });
       toggleOptionsInput();
-      wrapper.querySelector("button").addEventListener("click", () => {
+      wrapper.querySelector(".delete-question").addEventListener("click", () => {
         project.questions = project.questions.filter((x) => x.id !== q.id);
         saveConfig(); refresh();
       });
@@ -561,7 +574,15 @@ function initWizard(node, sections, stepBar) {
   };
 
   prevBtn.addEventListener("click", () => showStep(currentStep - 1));
-  nextBtn.addEventListener("click", () => showStep(currentStep + 1));
+  nextBtn.addEventListener("click", () => {
+    if (currentStep === sections.length - 1) {
+      saveConfig();
+      closeProjectEditor();
+      showToast("Configuration terminée et enregistrée.");
+      return;
+    }
+    showStep(currentStep + 1);
+  });
   showStep(0);
 }
 
@@ -587,7 +608,7 @@ function renderModifiersEditor(node, project) {
 
   const previewNode = wrapper.querySelector(".modifier-preview");
 const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key === key);
-  const getQuestionChoices = (question) => question?.type === "select" ? (question.options || []) : [];
+  const getQuestionChoices = (question) => question?.type === "select" ? (question.options || []).map((o) => o.value) : [];
 
   (project.modifiers || []).forEach((mod) => {
     const row = document.createElement("div");
@@ -629,8 +650,8 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
           ${stageOptions}
         </select>
       </label>
-      <label class="effect-participant">Participant cible
-        <select data-k="participantId"><option value="">Choisir un participant</option>${(project.participants||[]).map(p=>`<option value="${p.id}">${p.label}</option>`).join("")}</select>
+      <label class="effect-participant">Participants à masquer
+        <div class="participant-checkboxes">${(project.participants||[]).map(p=>`<label><input type="checkbox" value="${p.id}" ${(mod.participantIds||[]).includes(p.id) ? "checked" : ""}/> ${p.label}</label>`).join("")}</div>
       </label>
       <label class="effect-row-break">Note visible côté utilisateur
         <input data-k="note" value="${mod.note || ""}" />
@@ -666,9 +687,9 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
         expectedInput.style.display = "block";
         expectedValuesNode.innerHTML = "";
       } else {
-        expectedInput.innerHTML = `<option value="${mod.expectedValue ?? 0}">${mod.expectedValue ?? 0}</option>`;
-        expectedInput.value = String(mod.expectedValue ?? 0);
-        expectedInput.style.display = "block";
+        expectedValuesNode.innerHTML = `<input type="number" step="0.1" value="${mod.expectedValue ?? 0}" />`;
+        expectedValuesNode.querySelector("input")?.addEventListener("input", normalizeAndSave);
+        expectedInput.style.display = "none";
       }
     };
 
@@ -678,14 +699,16 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       const isCommentOnly = effectSelect.value === "commentStage";
       stageField.style.display = isStageScope ? "grid" : "none";
       participantField.style.display = effectSelect.value === "toggleParticipant" ? "grid" : "none";
-      multiplierField.style.display = (isExclude || isCommentOnly) ? "none" : "grid";
+      multiplierField.style.display = (isExclude || isCommentOnly || effectSelect.value === "toggleParticipant") ? "none" : "grid";
+      row.querySelector(".effect-row-break").style.display = isCommentOnly ? "grid" : "none";
     };
 
     const normalizeAndSave = () => {
       mod.questionKey = qSelect.value;
       mod.operator = opSelect.value;
       const questionType = project.questions?.find((q) => q.key === mod.questionKey)?.type;
-      mod.expectedValue = questionType === "number" ? Number(expectedInput.value || 0) : expectedInput.value;
+      const numericExpected = expectedValuesNode.querySelector('input[type="number"]');
+      mod.expectedValue = questionType === "number" ? Number(numericExpected?.value || 0) : expectedInput.value;
       if (effectSelect.value === "excludeStage" || effectSelect.value === "commentStage") {
         scopeSelect.value = "stage";
       }
@@ -693,8 +716,8 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       mod.effect = effectSelect.value;
       mod.multiplier = Number(multiplierInput.value || 1);
       mod.stageId = stageSelect.value || undefined;
-      mod.participantId = row.querySelector("[data-k=\"participantId\"]")?.value || undefined;
-      mod.expectedValues = [expectedInput.value].filter(Boolean);
+      mod.participantIds = Array.from(row.querySelectorAll(".participant-checkboxes input:checked")).map((i) => i.value);
+      mod.expectedValues = [String(mod.expectedValue)].filter(Boolean);
       mod.note = row.querySelector('[data-k="note"]').value;
       saveConfig();
     };
@@ -705,11 +728,12 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
     syncUi();
       normalizeAndSave();
     }));
+    row.querySelectorAll(".participant-checkboxes input").forEach((cb) => cb.addEventListener("change", normalizeAndSave));
 
     row.querySelector(".delete-modifier").addEventListener("click", () => {
       project.modifiers = project.modifiers.filter((x) => x.id !== mod.id);
       saveConfig();
-      refresh();
+      renderModifiersEditor(node, project);
     });
 
     populateExpectedValues();
@@ -725,7 +749,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       id: crypto.randomUUID(),
       questionKey: firstQuestion?.key || "",
       operator: firstQuestion?.type === "number" ? ">" : "=",
-      expectedValue: firstQuestion?.type === "number" ? 0 : (firstQuestion?.options?.[0] || ""),
+      expectedValue: firstQuestion?.type === "number" ? 0 : (firstQuestion?.options?.[0]?.value || ""),
       scope: "global",
       effect: "multiply",
       multiplier: 1.1,
@@ -733,7 +757,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       note: "Ajustement personnalisé"
     });
     saveConfig();
-    refresh();
+    renderModifiersEditor(node, project);
   });
 
   previewNode.innerHTML = buildModifierPreview(project);
@@ -757,6 +781,10 @@ function buildModifierPreview(project) {
         if ((mod.effect || "multiply") === "commentStage") {
           const stageLabel = project.stages.find((s) => s.id === mod.stageId)?.label || mod.stageRef || "étape cible";
           return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, afficher un commentaire sur l'étape <strong>${stageLabel}</strong>.</li>`;
+        }
+        if ((mod.effect || "multiply") === "toggleParticipant") {
+          const labels = (mod.participantIds || []).map((id) => project.participants.find((p) => p.id === id)?.label).filter(Boolean);
+          return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, masquer <strong>${labels.join(", ") || "participants sélectionnés"}</strong> ${scope}.</li>`;
         }
         return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, appliquer x${round1(Number(mod.multiplier || 1))} ${scope}.</li>`;
       }).join("")}
@@ -913,11 +941,6 @@ els.addProjectBtn.addEventListener("click", () => {
     modifiers: []
   });
   saveConfig(); refresh();
-});
-
-els.saveLocalBtn.addEventListener("click", () => {
-  saveConfig();
-  showToast(`Configuration sauvegardée (${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}).`);
 });
 
 els.resetBtn.addEventListener("click", () => {
