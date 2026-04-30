@@ -242,3 +242,8 @@ footer {
 .effect-participant{display:none}
 .effect-row-break{grid-column:1/-1;border-top:1px dashed var(--border);margin-top:2px;padding-top:6px}
 .modifier-row{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.admin-toolbar{position:sticky;top:8px;z-index:2}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:80}
+.modal.show{display:flex}
+.modal-backdrop{position:absolute;inset:0;background:rgba(21,35,60,.45)}
+.modal-content{position:relative;width:min(1180px,94vw);max-height:92vh;overflow:auto}
