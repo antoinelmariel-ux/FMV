@@ -1,5 +1,5 @@
 const STORAGE_KEY = "fmv-local-config-v1";
-const APP_VERSION = "1.15.0";
+const APP_VERSION = "1.16.0";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
@@ -244,6 +244,11 @@ function renderQuestionnaire() {
     .join("");
 }
 
+
+function clearRecommendation() {
+  els.reportOutput.innerHTML = '<div class="report-empty">Aucune recommandation calculée.</div>';
+}
+
 function evaluateModifier(mod, answers) {
   const actual = answers[mod.questionKey];
   if (mod.operator === ">") return Number(actual) > Number(mod.expectedValue);
@@ -272,41 +277,63 @@ function computeRecommendation() {
   }
 
   let globalMultiplier = 1;
-  const triggered = [];
-  const globalTriggered = [];
+  const globalNotes = [];
   const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [], hiddenParticipants: new Set() }]));
 
-  const resolveStageId = (mod) =>
-    mod.stageId || project.stages.find((s) => s.label === mod.stageRef)?.id;
+  const resolveStageId = (mod) => mod.stageId || project.stages.find((s) => s.label === mod.stageRef)?.id;
+  const resolveTargetStages = (mod) => {
+    if ((mod.scope || "global") === "stage") {
+      const stageId = resolveStageId(mod);
+      return stageId && stageEffects.has(stageId) ? [stageId] : [];
+    }
+    if (Array.isArray(mod.stageIds) && mod.stageIds.length) {
+      return mod.stageIds.filter((id) => stageEffects.has(id));
+    }
+    return project.stages.map((s) => s.id);
+  };
 
   for (const mod of project.modifiers || []) {
-    if (evaluateModifier(mod, answers)) {
-      const effect = mod.effect || "multiply";
-      const scope = mod.scope || "global";
-      const note = mod.note || "Modificateur appliqué";
+    if (!evaluateModifier(mod, answers)) continue;
+    const effect = mod.effect || "multiply";
+    const note = mod.note || "Modificateur appliqué";
+    const targetStages = resolveTargetStages(mod);
 
-      if (scope === "stage") {
-        const stageId = resolveStageId(mod);
-        if (!stageId || !stageEffects.has(stageId)) continue;
-        const stageState = stageEffects.get(stageId);
-        if (effect === "excludeStage") {
-          stageState.excluded = true;
-        } else if (effect === "commentStage") {
-          // commentaire uniquement
-        } else if (effect === "toggleParticipant") {
-          const ids = Array.isArray(mod.participantIds) ? mod.participantIds : [mod.participantId].filter(Boolean);
-          ids.forEach((id) => stageState.hiddenParticipants.add(id));
-          // commentaire uniquement, sans impact horaire
-        } else {
+    if (effect === "multiply") {
+      if ((mod.scope || "global") === "stage") {
+        targetStages.forEach((stageId) => {
+          const stageState = stageEffects.get(stageId);
           stageState.multiplier *= Number(mod.multiplier || 1);
-        }
-        stageState.notes.push(note);
+          stageState.notes.push(note);
+        });
       } else {
         globalMultiplier *= Number(mod.multiplier || 1);
-        globalTriggered.push(note);
+        globalNotes.push(note);
       }
+      continue;
+    }
 
-      triggered.push(note);
+    if (effect === "excludeStage") {
+      targetStages.forEach((stageId) => {
+        const stageState = stageEffects.get(stageId);
+        stageState.excluded = true;
+        stageState.notes.push(note);
+      });
+      continue;
+    }
+
+    if (effect === "toggleParticipant") {
+      const ids = Array.isArray(mod.participantIds) ? mod.participantIds : [mod.participantId].filter(Boolean);
+      targetStages.forEach((stageId) => {
+        const stageState = stageEffects.get(stageId);
+        ids.forEach((id) => stageState.hiddenParticipants.add(id));
+        stageState.notes.push(note);
+      });
+      continue;
+    }
+
+    if (effect === "commentStage") {
+      if ((mod.scope || "global") === "global") globalNotes.push(note);
+      targetStages.forEach((stageId) => stageEffects.get(stageId).notes.push(note));
     }
   }
 
@@ -338,8 +365,8 @@ function computeRecommendation() {
       const justificationParts = [];
       if (base.note) justificationParts.push(base.note);
       if (stageState.notes.length) justificationParts.push(`Modificateurs: ${stageState.notes.join(" · ")}`);
-      if (globalTriggered.length) {
-        justificationParts.push(`Modificateurs globaux: ${globalTriggered.join(" · ")}`);
+      if (globalNotes.length) {
+        justificationParts.push(`Modificateurs globaux: ${globalNotes.join(" · ")}`);
       }
       rows += `<tr><td>${participant.label}</td><td>${min} h</td><td>${max} h</td><td>${justificationParts.join(" | ") || "—"}</td></tr>`;
     }
@@ -919,7 +946,10 @@ function renderEntityChip(value, onDelete, onEdit, onUp, onDown) {
   return div;
 }
 
-els.projectSelect.addEventListener("change", renderQuestionnaire);
+els.projectSelect.addEventListener("change", () => {
+  renderQuestionnaire();
+  clearRecommendation();
+});
 els.calculateBtn.addEventListener("click", computeRecommendation);
 els.exportPdfBtn.addEventListener("click", () => window.print());
 
