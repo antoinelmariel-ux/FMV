@@ -1,5 +1,5 @@
 {
-  "version": "1.22.8",
+  "version": "1.22.9",
   "projectTypes": [
     {
       "id": "project-symposium",
@@ -35,7 +35,7 @@
         },
         {
           "id": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9",
-          "label": "Orateur ET Modérateur",
+          "label": "Orateur et modérateur",
           "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
         }
       ],
@@ -68,7 +68,7 @@
             },
             {
               "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
-              "value": "Non"
+              "value": "Oui_orateur_moderateur"
             },
             {
               "label": "Non",
@@ -198,17 +198,16 @@
           "id": "d68ce86d-69b0-4826-903c-d55ce0339c5e",
           "questionKey": "slidesReady",
           "operator": "in",
-          "expectedValue": "Non",
+          "expectedValue": "Oui_orateur_moderateur",
           "scope": "global",
           "effect": "toggleParticipant",
           "multiplier": 1.1,
           "note": "",
           "participantIds": [
-            "participant-moderator",
-            "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
+            "participant-moderator"
           ],
           "expectedValues": [
-            "Non"
+            "Oui_orateur_moderateur"
           ]
         },
         {
@@ -295,7 +294,7 @@
         },
         {
           "id": "df300a16-8538-4fca-bfad-e17ffea47bd5",
-          "label": "Orateur ET Modérateur",
+          "label": "Orateur et modérateur",
           "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
         }
       ],
@@ -328,7 +327,7 @@
             },
             {
               "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
-              "value": "Non"
+              "value": "Oui_orateur_moderateur"
             },
             {
               "label": "Non",
@@ -541,17 +540,16 @@
           "id": "54eb75f2-8eac-4741-b374-841248bb2031",
           "questionKey": "slidesReady",
           "operator": "in",
-          "expectedValue": "Non",
+          "expectedValue": "Oui_orateur_moderateur",
           "scope": "global",
           "effect": "toggleParticipant",
           "multiplier": 1.1,
           "note": "",
           "participantIds": [
-            "4f774d37-b66c-4b29-aac5-ea385242c729",
-            "df300a16-8538-4fca-bfad-e17ffea47bd5"
+            "4f774d37-b66c-4b29-aac5-ea385242c729"
           ],
           "expectedValues": [
-            "Non"
+            "Oui_orateur_moderateur"
           ]
         },
         {
@@ -663,7 +661,7 @@
         },
         {
           "id": "7c242979-a529-4adf-8771-7b11b5f49364",
-          "label": "Orateur ET Modérateur",
+          "label": "Orateur et modérateur",
           "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
         }
       ],
@@ -696,7 +694,7 @@
             },
             {
               "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
-              "value": "Non"
+              "value": "Oui_orateur_moderateur"
             },
             {
               "label": "Non",
@@ -876,17 +874,16 @@
           "id": "09c4c31a-2191-45b2-bfc5-9b5d4a987c3e",
           "questionKey": "slidesReady",
           "operator": "in",
-          "expectedValue": "Non",
+          "expectedValue": "Oui_orateur_moderateur",
           "scope": "global",
           "effect": "toggleParticipant",
           "multiplier": 1.1,
           "note": "",
           "participantIds": [
-            "fa949497-a141-4842-bf47-2224741f22af",
-            "7c242979-a529-4adf-8771-7b11b5f49364"
+            "fa949497-a141-4842-bf47-2224741f22af"
           ],
           "expectedValues": [
-            "Non"
+            "Oui_orateur_moderateur"
           ]
         },
         {
