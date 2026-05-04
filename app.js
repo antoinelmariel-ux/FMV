@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.0";
+const APP_VERSION = "1.22.2";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -958,7 +958,7 @@ els.exportJsonBtn.addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `fmv-config-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = PROJECT_CONFIG_FILE;
   a.click();
   URL.revokeObjectURL(url);
 });
