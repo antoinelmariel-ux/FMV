@@ -1,18 +1,43 @@
 {
+  "version": "1.22.3",
   "projectTypes": [
     {
       "id": "project-symposium",
-      "name": "Symposium international",
+      "name": "Symposium régional",
       "description": "Session scientifique avec orateur(s) et modération.",
       "stages": [
-        { "id": "stage-brief", "label": "Brief", "value": "stage-brief" },
-        { "id": "stage-slides", "label": "Préparation des slides", "value": "stage-slides" },
-        { "id": "stage-workshop", "label": "Réunion de travail", "value": "stage-workshop" },
-        { "id": "stage-final", "label": "Présentation finale", "value": "stage-final" }
+        {
+          "id": "stage-slides",
+          "label": "Préparation",
+          "value": "stage-slides"
+        },
+        {
+          "id": "stage-workshop",
+          "label": "Revue de slides",
+          "value": "stage-workshop"
+        },
+        {
+          "id": "stage-final",
+          "label": "Présentation / Participation symposium",
+          "value": "stage-final"
+        }
       ],
       "participants": [
-        { "id": "participant-speaker", "label": "Orateur", "value": "participant-speaker" },
-        { "id": "participant-moderator", "label": "Modérateur", "value": "participant-moderator" }
+        {
+          "id": "participant-speaker",
+          "label": "Orateur",
+          "value": "participant-speaker"
+        },
+        {
+          "id": "participant-moderator",
+          "label": "Modérateur",
+          "value": "participant-moderator"
+        },
+        {
+          "id": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9",
+          "label": "Orateur ET Modérateur",
+          "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
+        }
       ],
       "questions": [
         {
@@ -23,50 +48,855 @@
         },
         {
           "id": "question-complexity",
-          "label": "Niveau de complexité",
+          "label": "Effort de préparation",
           "type": "select",
           "key": "complexity",
           "options": [
-            { "label": "Standard", "value": "Standard" },
-            { "label": "Élevé", "value": "Élevé" }
+            {
+              "label": "Réutilisation de slides avec adaptation mineures",
+              "value": "Standard"
+            },
+            {
+              "label": "Création complète du support pour le symposium",
+              "value": "Élevé"
+            }
           ]
         },
         {
           "id": "question-slides-ready",
-          "label": "Slides déjà prêtes ?",
+          "label": "Une modération par un expert est-elle prévue ?",
           "type": "select",
           "key": "slidesReady",
           "options": [
-            { "label": "Oui", "value": "Oui" },
-            { "label": "Non", "value": "Non" }
+            {
+              "label": "Oui, un expert qui jouera le rôle de modérateur",
+              "value": "Oui"
+            },
+            {
+              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+              "value": "Non"
+            },
+            {
+              "label": "Non",
+              "value": "choix_3"
+            }
+          ],
+          "selectionMode": "multiple"
+        },
+        {
+          "id": "f94c6d1b-eae5-486a-b842-33d166194c36",
+          "label": "A priori, un cycle de revu des slides est-il prévu ?",
+          "type": "select",
+          "key": "q_1777889856445",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_1"
+            },
+            {
+              "label": "Pas de revue nécessaire ou revue très limitée",
+              "value": "choix_2"
+            }
           ]
         }
       ],
-      "ranges": {},
+      "ranges": {
+        "stage-slides": {
+          "participant-speaker": {
+            "min": 2,
+            "max": 5,
+            "note": ""
+          },
+          "participant-moderator": {
+            "min": 0,
+            "max": 2,
+            "note": ""
+          },
+          "b5dd1385-f7c2-4564-b9c1-a6abda4830a9": {
+            "min": 2,
+            "max": 5,
+            "note": ""
+          }
+        },
+        "stage-workshop": {
+          "participant-speaker": {
+            "min": 1,
+            "max": 1,
+            "note": ""
+          },
+          "participant-moderator": {
+            "min": 0,
+            "max": 0,
+            "note": ""
+          },
+          "b5dd1385-f7c2-4564-b9c1-a6abda4830a9": {
+            "min": 1,
+            "max": 1,
+            "note": ""
+          }
+        },
+        "stage-final": {
+          "participant-speaker": {
+            "min": 0.5,
+            "max": 1.5,
+            "note": "Temps de participation active (présentation, participation aux échanges)"
+          },
+          "participant-moderator": {
+            "min": 0.5,
+            "max": 1.5,
+            "note": "Temps de participation active (animation, participation aux échanges)"
+          },
+          "b5dd1385-f7c2-4564-b9c1-a6abda4830a9": {
+            "min": 1,
+            "max": 1.5,
+            "note": "Temps de participation active (animation, présentation, participation aux échanges)"
+          }
+        }
+      },
       "modifiers": [
         {
           "id": "modifier-complexity",
           "questionKey": "complexity",
-          "expectedValue": "Élevé",
+          "expectedValue": "Réutilisation de slides avec adaptation mineures",
           "multiplier": 1.25,
-          "note": "Complexité élevée: +25%"
+          "note": "Privilégier le bas de la fourchette de temps la présentation étant déjà quasiment prête",
+          "operator": "in",
+          "scope": "stage",
+          "effect": "commentStage",
+          "stageId": "stage-slides",
+          "participantIds": [],
+          "expectedValues": [
+            "Réutilisation de slides avec adaptation mineures"
+          ]
         },
         {
-          "id": "modifier-duration",
-          "questionKey": "duration",
-          "operator": ">",
-          "expectedValue": 30,
-          "multiplier": 1.2,
-          "note": "Durée > 30 min: +20%"
+          "id": "97b5d857-0ba6-41b8-928f-d368d489e728",
+          "questionKey": "complexity",
+          "operator": "in",
+          "expectedValue": "Création complète du support pour le symposium",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "stage-slides",
+          "note": "Privilégier le haut de la fourchette de temps pour permettre la préparation des supports de présentation",
+          "participantIds": [],
+          "expectedValues": [
+            "Création complète du support pour le symposium"
+          ]
         },
         {
-          "id": "modifier-slides",
+          "id": "d3735f52-6ed9-41ba-bfab-a9046338cfe2",
           "questionKey": "slidesReady",
-          "expectedValue": "Oui",
+          "operator": "in",
+          "expectedValue": "Oui, un expert qui jouera le rôle de modérateur",
+          "scope": "global",
+          "effect": "toggleParticipant",
+          "multiplier": 1.1,
+          "note": "",
+          "participantIds": [
+            "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
+          ],
+          "expectedValues": [
+            "Oui, un expert qui jouera le rôle de modérateur"
+          ]
+        },
+        {
+          "id": "d68ce86d-69b0-4826-903c-d55ce0339c5e",
+          "questionKey": "slidesReady",
+          "operator": "in",
+          "expectedValue": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+          "scope": "global",
+          "effect": "toggleParticipant",
+          "multiplier": 1.1,
+          "note": "",
+          "participantIds": [
+            "participant-moderator"
+          ],
+          "expectedValues": [
+            "Oui, un expert qui jouera le rôle de modérateur ET d'orateur"
+          ]
+        },
+        {
+          "id": "fa1630c3-6a43-4a21-a44f-f2494fcd6ad6",
+          "questionKey": "q_1777889856445",
+          "operator": "in",
+          "expectedValue": "Pas de revue nécessaire ou revue très limitée",
           "scope": "stage",
           "effect": "excludeStage",
-          "stageRef": "Préparation des slides",
-          "note": "Slides déjà prêtes: étape « Préparation des slides » retirée"
+          "multiplier": 1.1,
+          "stageId": "stage-workshop",
+          "note": "Ajustement personnalisé",
+          "participantIds": [],
+          "expectedValues": [
+            "Pas de revue nécessaire ou revue très limitée"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "113badc3-3298-47e6-b71a-d295875dd2ef",
+      "name": "Symposium national",
+      "description": "Session scientifique avec orateur(s) et modération.",
+      "stages": [
+        {
+          "id": "75a78e60-0123-4816-b50a-8de4ba91ce7d",
+          "label": "Brief",
+          "value": "stage-brief"
+        },
+        {
+          "id": "65843924-cbb6-42ea-ab60-512afed36680",
+          "label": "Préparation",
+          "value": "stage-slides"
+        },
+        {
+          "id": "ffa83b3b-cd63-41d1-9925-e2f4d91aceb1",
+          "label": "Revue de slides",
+          "value": "stage-workshop"
+        },
+        {
+          "id": "3f02c1de-7f72-41b4-a77c-c8856c8b2557",
+          "label": "Cadrage entre orateurs",
+          "value": "3f02c1de-7f72-41b4-a77c-c8856c8b2557"
+        },
+        {
+          "id": "7a4c69f2-f6c7-423a-aa94-64690e710fa3",
+          "label": "Filage entre orateurs",
+          "value": "7a4c69f2-f6c7-423a-aa94-64690e710fa3"
+        },
+        {
+          "id": "ca67802a-ddeb-46ec-be30-4257b3b62f48",
+          "label": "Présentation / Participation symposium",
+          "value": "stage-final"
+        }
+      ],
+      "participants": [
+        {
+          "id": "fb9876cd-2459-48bd-b1f2-1a62ddbe9724",
+          "label": "Orateur",
+          "value": "participant-speaker"
+        },
+        {
+          "id": "4f774d37-b66c-4b29-aac5-ea385242c729",
+          "label": "Modérateur",
+          "value": "participant-moderator"
+        },
+        {
+          "id": "df300a16-8538-4fca-bfad-e17ffea47bd5",
+          "label": "Orateur ET Modérateur",
+          "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
+        }
+      ],
+      "questions": [
+        {
+          "id": "1663b5ad-1651-45af-af6f-f937eb9820fd",
+          "label": "Durée de la présentation (minutes)",
+          "type": "number",
+          "key": "duration"
+        },
+        {
+          "id": "8856c602-46e3-4bac-a23c-fc923f546fa8",
+          "label": "Effort de préparation",
+          "type": "select",
+          "key": "complexity",
+          "options": [
+            {
+              "label": "Réutilisation de slides avec adaptation mineures",
+              "value": "Standard"
+            },
+            {
+              "label": "Création complète du support pour le symposium",
+              "value": "Élevé"
+            }
+          ]
+        },
+        {
+          "id": "0a1fd658-fbae-4b71-a728-4825c73794b0",
+          "label": "Une modération par un expert est-elle prévue ?",
+          "type": "select",
+          "key": "slidesReady",
+          "options": [
+            {
+              "label": "Oui, un expert qui jouera le rôle de modérateur",
+              "value": "Oui"
+            },
+            {
+              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+              "value": "Non"
+            },
+            {
+              "label": "Non",
+              "value": "choix_3"
+            }
+          ],
+          "selectionMode": "multiple"
+        },
+        {
+          "id": "1017e14d-9190-4535-bb03-2cd4cc902262",
+          "label": "A priori, un cycle de revu des slides est-il prévu ?",
+          "type": "select",
+          "key": "q_1777889856445",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_1"
+            },
+            {
+              "label": "Pas de revue nécessaire ou revue très limitée",
+              "value": "choix_2"
+            }
+          ]
+        },
+        {
+          "id": "1b01df48-13e9-464c-8e1b-3aa708d1dd30",
+          "label": "S'agit-il d'un symposium multi-intervenant nécessitant une harmonisation des messages ou un débat à structurer",
+          "type": "select",
+          "key": "q_1777894073818",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_1"
+            },
+            {
+              "label": "Non",
+              "value": "choix_2"
+            }
+          ]
+        },
+        {
+          "id": "d16158ec-561a-42b8-8603-b1a3bc07f7e1",
+          "label": "S'agit-il plutôt ...",
+          "type": "select",
+          "key": "q_1777894165083",
+          "options": [
+            {
+              "label": "D'un sympo classique ",
+              "value": "choix_1"
+            },
+            {
+              "label": "D'un sympo \"complexe\" (multiplicité des intervenants, timings serrés, utilisation d'outils techniques, ...) ",
+              "value": "choix_2"
+            }
+          ]
+        }
+      ],
+      "ranges": {
+        "75a78e60-0123-4816-b50a-8de4ba91ce7d": {
+          "fb9876cd-2459-48bd-b1f2-1a62ddbe9724": {
+            "min": 0,
+            "max": 0.5,
+            "note": ""
+          },
+          "4f774d37-b66c-4b29-aac5-ea385242c729": {
+            "min": 0,
+            "max": 0.5,
+            "note": ""
+          },
+          "df300a16-8538-4fca-bfad-e17ffea47bd5": {
+            "min": 0,
+            "max": 0.5,
+            "note": ""
+          }
+        },
+        "65843924-cbb6-42ea-ab60-512afed36680": {
+          "fb9876cd-2459-48bd-b1f2-1a62ddbe9724": {
+            "min": 2,
+            "max": 5,
+            "note": ""
+          },
+          "4f774d37-b66c-4b29-aac5-ea385242c729": {
+            "min": 1,
+            "max": 2,
+            "note": ""
+          },
+          "df300a16-8538-4fca-bfad-e17ffea47bd5": {
+            "min": 2,
+            "max": 5,
+            "note": ""
+          }
+        },
+        "ffa83b3b-cd63-41d1-9925-e2f4d91aceb1": {
+          "fb9876cd-2459-48bd-b1f2-1a62ddbe9724": {
+            "min": 1,
+            "max": 1,
+            "note": ""
+          },
+          "4f774d37-b66c-4b29-aac5-ea385242c729": {
+            "min": 0,
+            "max": 0,
+            "note": ""
+          },
+          "df300a16-8538-4fca-bfad-e17ffea47bd5": {
+            "min": 1,
+            "max": 1,
+            "note": ""
+          }
+        },
+        "ca67802a-ddeb-46ec-be30-4257b3b62f48": {
+          "fb9876cd-2459-48bd-b1f2-1a62ddbe9724": {
+            "min": 0.5,
+            "max": 1.5,
+            "note": "Temps de participation active (présentation, participation aux échanges)"
+          },
+          "4f774d37-b66c-4b29-aac5-ea385242c729": {
+            "min": 0.5,
+            "max": 1.5,
+            "note": "Temps de participation active (animation, participation aux échanges)"
+          },
+          "df300a16-8538-4fca-bfad-e17ffea47bd5": {
+            "min": 1,
+            "max": 1.5,
+            "note": "Temps de participation active (animation, présentation, participation aux échanges)"
+          }
+        },
+        "3f02c1de-7f72-41b4-a77c-c8856c8b2557": {
+          "fb9876cd-2459-48bd-b1f2-1a62ddbe9724": {
+            "min": 0,
+            "max": 1.5,
+            "note": ""
+          },
+          "4f774d37-b66c-4b29-aac5-ea385242c729": {
+            "min": 0,
+            "max": 1.5,
+            "note": ""
+          },
+          "df300a16-8538-4fca-bfad-e17ffea47bd5": {
+            "min": 0,
+            "max": 1.4,
+            "note": ""
+          }
+        },
+        "7a4c69f2-f6c7-423a-aa94-64690e710fa3": {
+          "fb9876cd-2459-48bd-b1f2-1a62ddbe9724": {
+            "min": 0,
+            "max": 2,
+            "note": "Assurez-vous d'avoir techniquement le temps et le lieux pour réaliser le filage"
+          },
+          "4f774d37-b66c-4b29-aac5-ea385242c729": {
+            "min": 0,
+            "max": 2,
+            "note": "Assurez-vous d'avoir techniquement le temps et le lieux pour réaliser le filage"
+          },
+          "df300a16-8538-4fca-bfad-e17ffea47bd5": {
+            "min": 0,
+            "max": 2,
+            "note": "Assurez-vous d'avoir techniquement le temps et le lieux pour réaliser le filage"
+          }
+        }
+      },
+      "modifiers": [
+        {
+          "id": "d552d7a8-91a3-4010-9355-691c627bfb48",
+          "questionKey": "complexity",
+          "expectedValue": "Réutilisation de slides avec adaptation mineures",
+          "multiplier": 1.25,
+          "note": "Privilégier le bas de la fourchette de temps la présentation étant déjà quasiment prête",
+          "operator": "in",
+          "scope": "stage",
+          "effect": "commentStage",
+          "stageId": "65843924-cbb6-42ea-ab60-512afed36680",
+          "participantIds": [],
+          "expectedValues": [
+            "Réutilisation de slides avec adaptation mineures"
+          ]
+        },
+        {
+          "id": "26e8fec6-c94d-42f5-a5f8-ef46e3e66ff5",
+          "questionKey": "complexity",
+          "operator": "in",
+          "expectedValue": "Création complète du support pour le symposium",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "65843924-cbb6-42ea-ab60-512afed36680",
+          "note": "Privilégier le haut de la fourchette de temps pour permettre la préparation des supports de présentation",
+          "participantIds": [],
+          "expectedValues": [
+            "Création complète du support pour le symposium"
+          ]
+        },
+        {
+          "id": "6cd7e89f-40b5-491c-97fb-ceeaa01e5fcb",
+          "questionKey": "slidesReady",
+          "operator": "in",
+          "expectedValue": "Oui, un expert qui jouera le rôle de modérateur",
+          "scope": "global",
+          "effect": "toggleParticipant",
+          "multiplier": 1.1,
+          "note": "",
+          "participantIds": [
+            "df300a16-8538-4fca-bfad-e17ffea47bd5"
+          ],
+          "expectedValues": [
+            "Oui, un expert qui jouera le rôle de modérateur"
+          ]
+        },
+        {
+          "id": "54eb75f2-8eac-4741-b374-841248bb2031",
+          "questionKey": "slidesReady",
+          "operator": "in",
+          "expectedValue": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+          "scope": "global",
+          "effect": "toggleParticipant",
+          "multiplier": 1.1,
+          "note": "",
+          "participantIds": [
+            "4f774d37-b66c-4b29-aac5-ea385242c729"
+          ],
+          "expectedValues": [
+            "Oui, un expert qui jouera le rôle de modérateur ET d'orateur"
+          ]
+        },
+        {
+          "id": "405394e7-dfee-44ef-b285-78a738fb2018",
+          "questionKey": "q_1777889856445",
+          "operator": "in",
+          "expectedValue": "Pas de revue nécessaire ou revue très limitée",
+          "scope": "stage",
+          "effect": "excludeStage",
+          "multiplier": 1.1,
+          "stageId": "ffa83b3b-cd63-41d1-9925-e2f4d91aceb1",
+          "note": "Ajustement personnalisé",
+          "participantIds": [],
+          "expectedValues": [
+            "Pas de revue nécessaire ou revue très limitée"
+          ]
+        },
+        {
+          "id": "df72cfc8-c60f-4e5a-939b-22d622ae157a",
+          "questionKey": "q_1777894073818",
+          "operator": "in",
+          "expectedValue": "Non",
+          "scope": "stage",
+          "effect": "excludeStage",
+          "multiplier": 1.1,
+          "stageId": "3f02c1de-7f72-41b4-a77c-c8856c8b2557",
+          "note": "Ajustement personnalisé",
+          "participantIds": [],
+          "expectedValues": [
+            "Non"
+          ]
+        },
+        {
+          "id": "b2c9d3d8-841c-41ef-ba93-7f3011994a7e",
+          "questionKey": "q_1777894165083",
+          "operator": "in",
+          "expectedValue": "D'un sympo classique ",
+          "scope": "stage",
+          "effect": "excludeStage",
+          "multiplier": 1.1,
+          "stageId": "7a4c69f2-f6c7-423a-aa94-64690e710fa3",
+          "note": "Ajustement personnalisé",
+          "participantIds": [],
+          "expectedValues": [
+            "D'un sympo classique "
+          ]
+        }
+      ]
+    },
+    {
+      "id": "079d74aa-f0d8-4268-83aa-2c5861196b21",
+      "name": "Webinar",
+      "description": "",
+      "stages": [
+        {
+          "id": "57989b33-7d44-4e44-8e06-7c3e10f493b5",
+          "label": "Brief",
+          "value": "stage-brief"
+        },
+        {
+          "id": "d66ba486-06ff-4786-b5bd-e629f8b9eae8",
+          "label": "Préparation",
+          "value": "stage-slides"
+        },
+        {
+          "id": "e725a3fb-43d9-4032-b946-7c67edc6fc1a",
+          "label": "Revue de slides",
+          "value": "stage-workshop"
+        },
+        {
+          "id": "14a22129-f281-4506-a1b1-d02e6a5ba702",
+          "label": "Cadrage entre orateurs",
+          "value": "3f02c1de-7f72-41b4-a77c-c8856c8b2557"
+        },
+        {
+          "id": "869cafda-4421-4ca5-8383-75603e96fd9f",
+          "label": "Présentation / Participation symposium",
+          "value": "stage-final"
+        }
+      ],
+      "participants": [
+        {
+          "id": "2ae37f0d-13e7-47ce-b949-5205cbb1e920",
+          "label": "Orateur",
+          "value": "participant-speaker"
+        },
+        {
+          "id": "fa949497-a141-4842-bf47-2224741f22af",
+          "label": "Modérateur",
+          "value": "participant-moderator"
+        },
+        {
+          "id": "7c242979-a529-4adf-8771-7b11b5f49364",
+          "label": "Orateur ET Modérateur",
+          "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
+        }
+      ],
+      "questions": [
+        {
+          "id": "24c2fc8d-b17e-4ff4-bbc7-188deb264f82",
+          "label": "Durée de la présentation (minutes)",
+          "type": "number",
+          "key": "duration"
+        },
+        {
+          "id": "77cdb2be-e7d1-47a4-af52-ca6c9f12df97",
+          "label": "Effort de préparation",
+          "type": "select",
+          "key": "complexity",
+          "options": [
+            {
+              "label": "Réutilisation de slides avec adaptation mineures",
+              "value": "Standard"
+            },
+            {
+              "label": "Création complète du support pour le symposium",
+              "value": "Élevé"
+            }
+          ]
+        },
+        {
+          "id": "dfe0d93c-24c6-4398-9107-947309fb352d",
+          "label": "Une modération par un expert est-elle prévue ?",
+          "type": "select",
+          "key": "slidesReady",
+          "options": [
+            {
+              "label": "Oui, un expert qui jouera le rôle de modérateur",
+              "value": "Oui"
+            },
+            {
+              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+              "value": "Non"
+            },
+            {
+              "label": "Non",
+              "value": "choix_3"
+            }
+          ],
+          "selectionMode": "multiple"
+        },
+        {
+          "id": "27648781-cae0-4528-9d20-2103f9afc81c",
+          "label": "A priori, un cycle de revu des slides est-il prévu ?",
+          "type": "select",
+          "key": "q_1777889856445",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_1"
+            },
+            {
+              "label": "Pas de revue nécessaire ou revue très limitée",
+              "value": "choix_2"
+            }
+          ]
+        },
+        {
+          "id": "a0efbf50-e718-486f-8912-e8df9ea39ea7",
+          "label": "S'agit-il d'un symposium multi-intervenant nécessitant une harmonisation des messages ou un débat à structurer",
+          "type": "select",
+          "key": "q_1777895008777",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_1"
+            },
+            {
+              "label": "Non",
+              "value": "choix_2"
+            }
+          ]
+        }
+      ],
+      "ranges": {
+        "57989b33-7d44-4e44-8e06-7c3e10f493b5": {
+          "2ae37f0d-13e7-47ce-b949-5205cbb1e920": {
+            "min": 0,
+            "max": 0.5,
+            "note": ""
+          },
+          "fa949497-a141-4842-bf47-2224741f22af": {
+            "min": 0,
+            "max": 0.5,
+            "note": ""
+          },
+          "7c242979-a529-4adf-8771-7b11b5f49364": {
+            "min": 0,
+            "max": 0.5,
+            "note": ""
+          }
+        },
+        "d66ba486-06ff-4786-b5bd-e629f8b9eae8": {
+          "2ae37f0d-13e7-47ce-b949-5205cbb1e920": {
+            "min": 2,
+            "max": 3,
+            "note": ""
+          },
+          "fa949497-a141-4842-bf47-2224741f22af": {
+            "min": 1,
+            "max": 1,
+            "note": ""
+          },
+          "7c242979-a529-4adf-8771-7b11b5f49364": {
+            "min": 2,
+            "max": 3,
+            "note": ""
+          }
+        },
+        "e725a3fb-43d9-4032-b946-7c67edc6fc1a": {
+          "2ae37f0d-13e7-47ce-b949-5205cbb1e920": {
+            "min": 1,
+            "max": 1,
+            "note": ""
+          },
+          "fa949497-a141-4842-bf47-2224741f22af": {
+            "min": 0,
+            "max": 0,
+            "note": ""
+          },
+          "7c242979-a529-4adf-8771-7b11b5f49364": {
+            "min": 1,
+            "max": 1,
+            "note": ""
+          }
+        },
+        "869cafda-4421-4ca5-8383-75603e96fd9f": {
+          "2ae37f0d-13e7-47ce-b949-5205cbb1e920": {
+            "min": 0.5,
+            "max": 1,
+            "note": "Temps de participation active (présentation, participation aux échanges)"
+          },
+          "fa949497-a141-4842-bf47-2224741f22af": {
+            "min": 0.5,
+            "max": 1,
+            "note": "Temps de participation active (animation, participation aux échanges)"
+          },
+          "7c242979-a529-4adf-8771-7b11b5f49364": {
+            "min": 1,
+            "max": 1,
+            "note": "Temps de participation active (animation, présentation, participation aux échanges)"
+          }
+        },
+        "14a22129-f281-4506-a1b1-d02e6a5ba702": {
+          "2ae37f0d-13e7-47ce-b949-5205cbb1e920": {
+            "min": 0,
+            "max": 1,
+            "note": ""
+          },
+          "fa949497-a141-4842-bf47-2224741f22af": {
+            "min": 0,
+            "max": 1,
+            "note": ""
+          },
+          "7c242979-a529-4adf-8771-7b11b5f49364": {
+            "min": 0,
+            "max": 1,
+            "note": ""
+          }
+        }
+      },
+      "modifiers": [
+        {
+          "id": "482b81bc-9ffa-40a3-904d-0abc0f4ee4f2",
+          "questionKey": "complexity",
+          "expectedValue": "Réutilisation de slides avec adaptation mineures",
+          "multiplier": 1.25,
+          "note": "Privilégier le bas de la fourchette de temps la présentation étant déjà quasiment prête",
+          "operator": "in",
+          "scope": "stage",
+          "effect": "commentStage",
+          "stageId": "d66ba486-06ff-4786-b5bd-e629f8b9eae8",
+          "participantIds": [],
+          "expectedValues": [
+            "Réutilisation de slides avec adaptation mineures"
+          ]
+        },
+        {
+          "id": "c8809b55-68be-44c7-a27e-558a8fef0f6d",
+          "questionKey": "complexity",
+          "operator": "in",
+          "expectedValue": "Création complète du support pour le symposium",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "d66ba486-06ff-4786-b5bd-e629f8b9eae8",
+          "note": "Privilégier le haut de la fourchette de temps pour permettre la préparation des supports de présentation",
+          "participantIds": [],
+          "expectedValues": [
+            "Création complète du support pour le symposium"
+          ]
+        },
+        {
+          "id": "85609edb-b56a-4ae3-a6e9-17c28e7d690a",
+          "questionKey": "slidesReady",
+          "operator": "in",
+          "expectedValue": "Oui, un expert qui jouera le rôle de modérateur",
+          "scope": "global",
+          "effect": "toggleParticipant",
+          "multiplier": 1.1,
+          "note": "",
+          "participantIds": [
+            "7c242979-a529-4adf-8771-7b11b5f49364"
+          ],
+          "expectedValues": [
+            "Oui, un expert qui jouera le rôle de modérateur"
+          ]
+        },
+        {
+          "id": "09c4c31a-2191-45b2-bfc5-9b5d4a987c3e",
+          "questionKey": "slidesReady",
+          "operator": "in",
+          "expectedValue": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+          "scope": "global",
+          "effect": "toggleParticipant",
+          "multiplier": 1.1,
+          "note": "",
+          "participantIds": [
+            "fa949497-a141-4842-bf47-2224741f22af"
+          ],
+          "expectedValues": [
+            "Oui, un expert qui jouera le rôle de modérateur ET d'orateur"
+          ]
+        },
+        {
+          "id": "47984f97-b3a6-441b-9d59-c1e8892dbb92",
+          "questionKey": "q_1777889856445",
+          "operator": "in",
+          "expectedValue": "Pas de revue nécessaire ou revue très limitée",
+          "scope": "stage",
+          "effect": "excludeStage",
+          "multiplier": 1.1,
+          "stageId": "e725a3fb-43d9-4032-b946-7c67edc6fc1a",
+          "note": "Ajustement personnalisé",
+          "participantIds": [],
+          "expectedValues": [
+            "Pas de revue nécessaire ou revue très limitée"
+          ]
+        },
+        {
+          "id": "8929bb0c-727e-4862-a666-1e4801f97d83",
+          "questionKey": "q_1777895008777",
+          "operator": "in",
+          "expectedValue": "Non",
+          "scope": "stage",
+          "effect": "excludeStage",
+          "multiplier": 1.1,
+          "stageId": "14a22129-f281-4506-a1b1-d02e6a5ba702",
+          "note": "Ajustement personnalisé",
+          "participantIds": [],
+          "expectedValues": [
+            "Non"
+          ]
         }
       ]
     }
