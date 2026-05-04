@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.10";
+const APP_VERSION = "1.22.11";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -261,7 +261,7 @@ function computeRecommendation() {
 
   let globalMultiplier = 1;
   const globalNotes = [];
-  const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [], hiddenParticipants: new Set() }]));
+  const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [], hiddenParticipants: new Set(), participantMultipliers: new Map(), participantNotes: new Map() }]));
 
   const resolveStageId = (mod) => mod.stageId || project.stages.find((s) => s.label === mod.stageRef)?.id;
   const resolveTargetStages = (mod) => {
@@ -282,11 +282,20 @@ function computeRecommendation() {
     const targetStages = resolveTargetStages(mod);
 
     if (effect === "multiply") {
+      const targetParticipantId = mod.targetParticipantId || "";
       if ((mod.scope || "global") === "stage") {
         targetStages.forEach((stageId) => {
           const stageState = stageEffects.get(stageId);
-          stageState.multiplier *= Number(mod.multiplier || 1);
-          stageState.notes.push(note);
+          if (targetParticipantId) {
+            const currentMultiplier = stageState.participantMultipliers.get(targetParticipantId) || 1;
+            stageState.participantMultipliers.set(targetParticipantId, currentMultiplier * Number(mod.multiplier || 1));
+            const participantNotes = stageState.participantNotes.get(targetParticipantId) || [];
+            participantNotes.push(note);
+            stageState.participantNotes.set(targetParticipantId, participantNotes);
+          } else {
+            stageState.multiplier *= Number(mod.multiplier || 1);
+            stageState.notes.push(note);
+          }
         });
       } else {
         globalMultiplier *= Number(mod.multiplier || 1);
@@ -334,7 +343,8 @@ function computeRecommendation() {
     for (const participant of project.participants) {
       if (stageState.hiddenParticipants?.has(participant.id)) continue;
       const base = project.ranges?.[stage.id]?.[participant.id] || { min: 0, max: 0, note: "" };
-      const effectiveMultiplier = globalMultiplier * stageState.multiplier;
+      const participantMultiplier = stageState.participantMultipliers?.get(participant.id) || 1;
+      const effectiveMultiplier = globalMultiplier * stageState.multiplier * participantMultiplier;
       const min = round1(Number(base.min) * effectiveMultiplier);
       const max = round1(Number(base.max) * effectiveMultiplier);
       globalMin += min;
@@ -347,6 +357,8 @@ function computeRecommendation() {
       const justificationParts = [];
       if (base.note) justificationParts.push(base.note);
       if (stageState.notes.length) justificationParts.push(stageState.notes.join(" · "));
+      const participantNotes = stageState.participantNotes?.get(participant.id) || [];
+      if (participantNotes.length) justificationParts.push(participantNotes.join(" · "));
       if (globalNotes.length) {
         justificationParts.push(`Modificateurs globaux: ${globalNotes.join(" · ")}`);
       }
@@ -666,6 +678,12 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       <label class="multiplier-field">Coefficient
         <input type="number" step="0.05" min="0" data-k="multiplier" value="${mod.multiplier ?? 1}" />
       </label>
+      <label class="target-participant-field">Participant ciblé (optionnel)
+        <select data-k="targetParticipantId">
+          <option value="">Tous les participants</option>
+          ${(project.participants || []).map((p) => `<option value="${p.id}">${p.label}</option>`).join("")}
+        </select>
+      </label>
       <label class="stage-field">Étape cible
         <select data-k="stageId">
           <option value="">Choisir une étape</option>
@@ -690,15 +708,18 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
     const effectSelect = row.querySelector('[data-k="effect"]');
     const multiplierInput = row.querySelector('[data-k="multiplier"]');
     const stageSelect = row.querySelector('[data-k="stageId"]');
+    const targetParticipantSelect = row.querySelector('[data-k="targetParticipantId"]');
     const multiplierField = row.querySelector(".multiplier-field");
     const stageField = row.querySelector(".stage-field");
     const participantField = row.querySelector(".effect-participant");
+    const targetParticipantField = row.querySelector(".target-participant-field");
 
     qSelect.value = mod.questionKey || project.questions?.[0]?.key || "";
     opSelect.value = mod.operator === ">" ? ">" : (mod.operator === "not_in" ? "not_in" : "in");
     scopeSelect.value = mod.scope === "stage" ? "stage" : "global";
     effectSelect.value = mod.effect || "multiply";
     stageSelect.value = mod.stageId || project.stages?.find((s) => s.label === mod.stageRef)?.id || "";
+    targetParticipantSelect.value = mod.targetParticipantId || "";
 
     const populateExpectedValues = () => {
       const question = getQuestionByKey(qSelect.value);
@@ -732,6 +753,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       const isToggleParticipant = effectSelect.value === "toggleParticipant";
       stageField.style.display = isStageScope ? "grid" : "none";
       participantField.style.display = isToggleParticipant ? "grid" : "none";
+      targetParticipantField.style.display = (!isExclude && !isCommentOnly && !isToggleParticipant) ? "grid" : "none";
       multiplierField.style.display = (isExclude || isCommentOnly || isToggleParticipant) ? "none" : "grid";
       row.querySelector(".effect-row-break").style.display = isCommentOnly ? "grid" : "none";
     };
@@ -749,6 +771,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       mod.effect = effectSelect.value;
       mod.multiplier = Number(multiplierInput.value || 1);
       mod.stageId = stageSelect.value || undefined;
+      mod.targetParticipantId = targetParticipantSelect.value || undefined;
       mod.participantIds = Array.from(row.querySelectorAll(".participant-checkboxes input:checked")).map((i) => i.value);
       mod.expectedValues = [String(mod.expectedValue)].filter(Boolean);
       mod.note = row.querySelector('[data-k="note"]').value;
@@ -787,6 +810,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       effect: "multiply",
       multiplier: 1.1,
       stageId: firstStage?.id,
+      targetParticipantId: "",
       note: "Ajustement personnalisé"
     });
     saveConfig();
@@ -819,7 +843,9 @@ function buildModifierPreview(project) {
           const labels = (mod.participantIds || []).map((id) => project.participants.find((p) => p.id === id)?.label).filter(Boolean);
           return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, masquer <strong>${labels.join(", ") || "participants sélectionnés"}</strong> ${scope}.</li>`;
         }
-        return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, appliquer x${round1(Number(mod.multiplier || 1))} ${scope}.</li>`;
+        const targetParticipant = project.participants.find((p) => p.id === mod.targetParticipantId)?.label;
+        const participantScope = targetParticipant ? ` pour <strong>${targetParticipant}</strong>` : "";
+        return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, appliquer x${round1(Number(mod.multiplier || 1))}${participantScope} ${scope}.</li>`;
       }).join("")}
     </ul>
   `;
