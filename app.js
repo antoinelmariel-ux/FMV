@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.6";
+const APP_VERSION = "1.22.7";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -48,6 +48,7 @@ function ensureRanges() {
     ensureEntityValues(project);
     ensureQuestionKeys(project);
     normalizeQuestionOptions(project);
+    normalizeModifierExpectedValues(project);
     project.ranges ||= {};
     for (const stage of project.stages) {
       project.ranges[stage.id] ||= {};
@@ -64,12 +65,44 @@ function ensureEntityValues(project) {
 function normalizeQuestionOptions(project) {
   for (const question of project.questions || []) {
     if (question.type !== "select") continue;
-    question.options = (question.options || []).map((opt) =>
-      typeof opt === "string" ? { label: opt, value: opt } : { label: opt.label || "", value: opt.value || "" }
-    );
+    question.options = (question.options || []).map((opt) => {
+      if (typeof opt === "string") return { label: opt, value: opt };
+      const label = String(opt?.label ?? opt?.value ?? "").trim();
+      const value = String(opt?.value ?? opt?.label ?? "").trim();
+      return { label, value };
+    });
   }
 }
 
+
+
+function normalizeModifierExpectedValues(project) {
+  const questionsByKey = new Map((project.questions || []).map((q) => [q.key, q]));
+  for (const mod of project.modifiers || []) {
+    const question = questionsByKey.get(mod.questionKey);
+    if (!question || question.type !== "select") continue;
+
+    const values = Array.isArray(mod.expectedValues)
+      ? mod.expectedValues
+      : (mod.expectedValue !== undefined && mod.expectedValue !== null ? [mod.expectedValue] : []);
+
+    const normalizedValues = values.map((raw) => {
+      const asString = String(raw);
+      const exactValue = (question.options || []).find((opt) => String(opt.value) === asString);
+      if (exactValue) return String(exactValue.value);
+      const byLabel = (question.options || []).find((opt) => String(opt.label) === asString);
+      if (byLabel) return String(byLabel.value);
+      return asString;
+    });
+
+    if (Array.isArray(mod.expectedValues)) {
+      mod.expectedValues = normalizedValues;
+      if (normalizedValues.length === 1) mod.expectedValue = normalizedValues[0];
+    } else if (normalizedValues.length) {
+      mod.expectedValue = normalizedValues[0];
+    }
+  }
+}
 function ensureQuestionKeys(project) {
   for (const question of project.questions || []) {
     if (!question.key) {
@@ -596,7 +629,7 @@ function renderModifiersEditor(node, project) {
 
   const previewNode = wrapper.querySelector(".modifier-preview");
 const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key === key);
-  const getQuestionChoices = (question) => question?.type === "select" ? (question.options || []).map((o) => o.label) : [];
+  const getQuestionChoices = (question) => question?.type === "select" ? (question.options || []).map((o) => ({ label: o.label, value: o.value })) : [];
 
   (project.modifiers || []).forEach((mod) => {
     const row = document.createElement("div");
@@ -677,8 +710,9 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
         if (!["in", "not_in"].includes(mod.operator)) mod.operator = "in";
         opSelect.value = mod.operator;
         const choices = getQuestionChoices(question);
-        expectedInput.innerHTML = choices.map((c) => `<option value="${c}">${c}</option>`).join("");
-        expectedInput.value = mod.expectedValue || choices[0] || "";
+        expectedInput.innerHTML = choices.map((c) => `<option value="${c.value}">${c.label}</option>`).join("");
+        const expectedFromLabel = choices.find((c) => c.label === mod.expectedValue)?.value;
+        expectedInput.value = mod.expectedValue || expectedFromLabel || choices[0]?.value || "";
         expectedInput.style.display = "block";
         expectedValuesNode.innerHTML = "";
       } else {
