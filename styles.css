@@ -274,3 +274,25 @@ footer {
 .participant-checkboxes input{width:auto}
 .row-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end}
 .choice-option-row .row-actions{grid-column:3 / 5}
+
+.btn.is-loading {
+  position: relative;
+  padding-right: 42px;
+  opacity: 0.9;
+}
+.btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: #fff;
+  animation: spin-loader 0.8s linear infinite;
+}
+@keyframes spin-loader {
+  to { transform: rotate(360deg); }
+}

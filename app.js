@@ -1,4 +1,4 @@
-const APP_VERSION = "1.21.0";
+const APP_VERSION = "1.22.0";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -905,7 +905,24 @@ els.projectSelect.addEventListener("change", () => {
   renderQuestionnaire();
   clearRecommendation();
 });
-els.calculateBtn.addEventListener("click", computeRecommendation);
+
+els.calculateBtn.addEventListener("click", async () => {
+  els.calculateBtn.disabled = true;
+  els.calculateBtn.classList.add("is-loading");
+  els.calculateBtn.setAttribute("aria-busy", "true");
+  const originalLabel = els.calculateBtn.textContent;
+  els.calculateBtn.textContent = "Calcul en cours";
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    computeRecommendation();
+  } finally {
+    els.calculateBtn.disabled = false;
+    els.calculateBtn.classList.remove("is-loading");
+    els.calculateBtn.removeAttribute("aria-busy");
+    els.calculateBtn.textContent = originalLabel;
+  }
+});
 els.exportPdfBtn.addEventListener("click", () => window.print());
 
 els.addProjectBtn.addEventListener("click", () => {
