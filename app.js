@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.2";
+const APP_VERSION = "1.22.3";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -1000,4 +1000,3 @@ async function initializeApp() {
 initializeApp();
 
 els.closeProjectEditorBtn?.addEventListener("click", closeProjectEditor);
-els.projectEditorModal?.addEventListener("click", (e) => { if (e.target.hasAttribute("data-close-modal")) closeProjectEditor(); });
