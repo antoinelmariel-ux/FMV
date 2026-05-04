@@ -1,0 +1,74 @@
+{
+  "projectTypes": [
+    {
+      "id": "project-symposium",
+      "name": "Symposium international",
+      "description": "Session scientifique avec orateur(s) et modération.",
+      "stages": [
+        { "id": "stage-brief", "label": "Brief", "value": "stage-brief" },
+        { "id": "stage-slides", "label": "Préparation des slides", "value": "stage-slides" },
+        { "id": "stage-workshop", "label": "Réunion de travail", "value": "stage-workshop" },
+        { "id": "stage-final", "label": "Présentation finale", "value": "stage-final" }
+      ],
+      "participants": [
+        { "id": "participant-speaker", "label": "Orateur", "value": "participant-speaker" },
+        { "id": "participant-moderator", "label": "Modérateur", "value": "participant-moderator" }
+      ],
+      "questions": [
+        {
+          "id": "question-duration",
+          "label": "Durée de la présentation (minutes)",
+          "type": "number",
+          "key": "duration"
+        },
+        {
+          "id": "question-complexity",
+          "label": "Niveau de complexité",
+          "type": "select",
+          "key": "complexity",
+          "options": [
+            { "label": "Standard", "value": "Standard" },
+            { "label": "Élevé", "value": "Élevé" }
+          ]
+        },
+        {
+          "id": "question-slides-ready",
+          "label": "Slides déjà prêtes ?",
+          "type": "select",
+          "key": "slidesReady",
+          "options": [
+            { "label": "Oui", "value": "Oui" },
+            { "label": "Non", "value": "Non" }
+          ]
+        }
+      ],
+      "ranges": {},
+      "modifiers": [
+        {
+          "id": "modifier-complexity",
+          "questionKey": "complexity",
+          "expectedValue": "Élevé",
+          "multiplier": 1.25,
+          "note": "Complexité élevée: +25%"
+        },
+        {
+          "id": "modifier-duration",
+          "questionKey": "duration",
+          "operator": ">",
+          "expectedValue": 30,
+          "multiplier": 1.2,
+          "note": "Durée > 30 min: +20%"
+        },
+        {
+          "id": "modifier-slides",
+          "questionKey": "slidesReady",
+          "expectedValue": "Oui",
+          "scope": "stage",
+          "effect": "excludeStage",
+          "stageRef": "Préparation des slides",
+          "note": "Slides déjà prêtes: étape « Préparation des slides » retirée"
+        }
+      ]
+    }
+  ]
+}
