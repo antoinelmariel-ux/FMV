@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.14";
+const APP_VERSION = "1.22.15";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -766,7 +766,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       const isToggleParticipant = effectSelect.value === "toggleParticipant";
       stageField.style.display = isStageScope ? "grid" : "none";
       participantField.style.display = isToggleParticipant ? "grid" : "none";
-      targetParticipantField.style.display = (!isExclude && !isCommentOnly && !isToggleParticipant) ? "grid" : "none";
+      targetParticipantField.style.display = (!isExclude && !isToggleParticipant) ? "grid" : "none";
       multiplierField.style.display = (isExclude || isCommentOnly || isToggleParticipant) ? "none" : "grid";
       row.querySelector(".effect-row-break").style.display = isCommentOnly ? "grid" : "none";
     };
