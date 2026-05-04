@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.12";
+const APP_VERSION = "1.22.13";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
