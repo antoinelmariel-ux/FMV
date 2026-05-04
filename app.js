@@ -1,6 +1,8 @@
-const APP_VERSION = "1.20.0";
+const APP_VERSION = "1.21.0";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
+let adminUnlocked = false;
+const ADMIN_PASSWORD = "FMV2026et+";
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
 
@@ -123,12 +125,33 @@ function restoreUndoState() {
   undoSnapshot = null;
 }
 
+function switchTab(tabId) {
+  const targetTab = [...els.tabs].find((t) => t.dataset.tab === tabId);
+  if (!targetTab) return;
+  els.tabs.forEach((t) => t.classList.remove("active"));
+  targetTab.classList.add("active");
+  els.panels.forEach((p) => p.classList.remove("active"));
+  document.getElementById(tabId).classList.add("active");
+}
+
+function askAdminPassword() {
+  const input = window.prompt("Mot de passe back-office :");
+  if (input === null) return false;
+  if (input === ADMIN_PASSWORD) {
+    adminUnlocked = true;
+    return true;
+  }
+  showToast("Mot de passe invalide");
+  return false;
+}
+
 els.tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
-    els.tabs.forEach((t) => t.classList.remove("active"));
-    tab.classList.add("active");
-    els.panels.forEach((p) => p.classList.remove("active"));
-    document.getElementById(tab.dataset.tab).classList.add("active");
+    if (tab.dataset.tab === "adminSpace" && !adminUnlocked && !askAdminPassword()) {
+      switchTab("userSpace");
+      return;
+    }
+    switchTab(tab.dataset.tab);
   });
 });
 
