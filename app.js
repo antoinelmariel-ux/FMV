@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.3";
+const APP_VERSION = "1.22.4";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -276,7 +276,6 @@ function computeRecommendation() {
       targetStages.forEach((stageId) => {
         const stageState = stageEffects.get(stageId);
         ids.forEach((id) => stageState.hiddenParticipants.add(id));
-        stageState.notes.push(note);
       });
       continue;
     }
@@ -700,7 +699,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       stageField.style.display = isStageScope ? "grid" : "none";
       participantField.style.display = isToggleParticipant ? "grid" : "none";
       multiplierField.style.display = (isExclude || isCommentOnly || isToggleParticipant) ? "none" : "grid";
-      row.querySelector(".effect-row-break").style.display = (isCommentOnly || isToggleParticipant) ? "grid" : "none";
+      row.querySelector(".effect-row-break").style.display = isCommentOnly ? "grid" : "none";
     };
 
     const normalizeAndSave = () => {
@@ -709,7 +708,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       const questionType = project.questions?.find((q) => q.key === mod.questionKey)?.type;
       const numericExpected = expectedValuesNode.querySelector('input[type="number"]');
       mod.expectedValue = questionType === "number" ? Number(numericExpected?.value || 0) : expectedInput.value;
-      if (["excludeStage", "commentStage", "toggleParticipant"].includes(effectSelect.value)) {
+      if (["excludeStage", "commentStage"].includes(effectSelect.value)) {
         scopeSelect.value = "stage";
       }
       mod.scope = scopeSelect.value;
