@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.9";
+const APP_VERSION = "1.22.10";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -355,7 +355,7 @@ function computeRecommendation() {
     sections.push(`
       <div>
         <h3 class="stage-title">${stage.label}</h3>
-        ${stageState.notes.length ? `<p><strong>Impact spécifique:</strong> ${stageState.notes.join(" · ")}</p>` : ""}
+        
         <table>
           <thead><tr><th>Participant</th><th>Min</th><th>Max</th><th>Justification</th></tr></thead>
           <tbody>${rows}</tbody>
