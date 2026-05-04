@@ -1,5 +1,5 @@
 {
-  "version": "1.22.5",
+  "version": "1.22.6",
   "projectTypes": [
     {
       "id": "project-symposium",
@@ -40,12 +40,6 @@
         }
       ],
       "questions": [
-        {
-          "id": "question-duration",
-          "label": "Durée de la présentation (minutes)",
-          "type": "number",
-          "key": "duration"
-        },
         {
           "id": "question-complexity",
           "label": "Effort de préparation",
@@ -287,12 +281,6 @@
         }
       ],
       "questions": [
-        {
-          "id": "1663b5ad-1651-45af-af6f-f937eb9820fd",
-          "label": "Durée de la présentation (minutes)",
-          "type": "number",
-          "key": "duration"
-        },
         {
           "id": "8856c602-46e3-4bac-a23c-fc923f546fa8",
           "label": "Effort de préparation",
@@ -642,12 +630,6 @@
         }
       ],
       "questions": [
-        {
-          "id": "24c2fc8d-b17e-4ff4-bbc7-188deb264f82",
-          "label": "Durée de la présentation (minutes)",
-          "type": "number",
-          "key": "duration"
-        },
         {
           "id": "77cdb2be-e7d1-47a4-af52-ca6c9f12df97",
           "label": "Effort de préparation",

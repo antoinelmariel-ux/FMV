@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.5";
+const APP_VERSION = "1.22.6";
 const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -313,7 +313,7 @@ function computeRecommendation() {
       }
       const justificationParts = [];
       if (base.note) justificationParts.push(base.note);
-      if (stageState.notes.length) justificationParts.push(`Modificateurs: ${stageState.notes.join(" · ")}`);
+      if (stageState.notes.length) justificationParts.push(stageState.notes.join(" · "));
       if (globalNotes.length) {
         justificationParts.push(`Modificateurs globaux: ${globalNotes.join(" · ")}`);
       }
