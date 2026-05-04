@@ -1,5 +1,5 @@
 {
-  "version": "1.22.10",
+  "version": "1.22.9",
   "projectTypes": [
     {
       "id": "project-symposium",
@@ -108,7 +108,7 @@
           },
           "b5dd1385-f7c2-4564-b9c1-a6abda4830a9": {
             "min": 2,
-            "max": 5,
+            "max": 7,
             "note": ""
           }
         },
@@ -141,7 +141,7 @@
             "note": "Temps de participation active (animation, participation aux échanges)"
           },
           "b5dd1385-f7c2-4564-b9c1-a6abda4830a9": {
-            "min": 1,
+            "min": 0.5,
             "max": 1.5,
             "note": "Temps de participation active (animation, présentation, participation aux échanges)"
           }
@@ -415,8 +415,8 @@
             "note": ""
           },
           "df300a16-8538-4fca-bfad-e17ffea47bd5": {
-            "min": 2,
-            "max": 5,
+            "min": 3,
+            "max": 7,
             "note": ""
           }
         },
@@ -449,7 +449,7 @@
             "note": "Temps de participation active (animation, participation aux échanges)"
           },
           "df300a16-8538-4fca-bfad-e17ffea47bd5": {
-            "min": 1,
+            "min": 0.5,
             "max": 1.5,
             "note": "Temps de participation active (animation, présentation, participation aux échanges)"
           }
@@ -467,7 +467,7 @@
           },
           "df300a16-8538-4fca-bfad-e17ffea47bd5": {
             "min": 0,
-            "max": 1.4,
+            "max": 1.5,
             "note": ""
           }
         },
@@ -766,8 +766,8 @@
             "note": ""
           },
           "7c242979-a529-4adf-8771-7b11b5f49364": {
-            "min": 2,
-            "max": 3,
+            "min": 3,
+            "max": 4,
             "note": ""
           }
         },
@@ -800,7 +800,7 @@
             "note": "Temps de participation active (animation, participation aux échanges)"
           },
           "7c242979-a529-4adf-8771-7b11b5f49364": {
-            "min": 1,
+            "min": 0.5,
             "max": 1,
             "note": "Temps de participation active (animation, présentation, participation aux échanges)"
           }
