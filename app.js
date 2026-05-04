@@ -1,84 +1,20 @@
-const APP_VERSION = "1.19.0";
+const APP_VERSION = "1.20.0";
+const PROJECT_CONFIG_FILE = "project-config.json";
 let undoSnapshot = null;
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
 
 const defaultConfig = {
   version: APP_VERSION,
-  projectTypes: [
-    {
-      id: crypto.randomUUID(),
-      name: "Symposium international",
-      description: "Session scientifique avec orateur(s) et modération.",
-      stages: [
-        { id: crypto.randomUUID(), label: "Brief" },
-        { id: crypto.randomUUID(), label: "Préparation des slides" },
-        { id: crypto.randomUUID(), label: "Réunion de travail" },
-        { id: crypto.randomUUID(), label: "Présentation finale" }
-      ],
-      participants: [
-        { id: crypto.randomUUID(), label: "Orateur" },
-        { id: crypto.randomUUID(), label: "Modérateur" }
-      ],
-      questions: [
-        {
-          id: crypto.randomUUID(),
-          label: "Durée de la présentation (minutes)",
-          type: "number",
-          key: "duration"
-        },
-        {
-          id: crypto.randomUUID(),
-          label: "Niveau de complexité",
-          type: "select",
-          key: "complexity",
-          options: ["Standard", "Élevé"]
-        },
-        {
-          id: crypto.randomUUID(),
-          label: "Slides déjà prêtes ?",
-          type: "select",
-          key: "slidesReady",
-          options: ["Oui", "Non"]
-        }
-      ],
-      ranges: {},
-      modifiers: [
-        {
-          id: crypto.randomUUID(),
-          questionKey: "complexity",
-          expectedValue: "Élevé",
-          multiplier: 1.25,
-          note: "Complexité élevée: +25%"
-        },
-        {
-          id: crypto.randomUUID(),
-          questionKey: "duration",
-          operator: ">",
-          expectedValue: 30,
-          multiplier: 1.2,
-          note: "Durée > 30 min: +20%"
-        },
-        {
-          id: crypto.randomUUID(),
-          questionKey: "slidesReady",
-          expectedValue: "Oui",
-          scope: "stage",
-          effect: "excludeStage",
-          stageRef: "Préparation des slides",
-          note: "Slides déjà prêtes: étape « Préparation des slides » retirée"
-        }
-      ]
-    }
-  ]
+  projectTypes: []
 };
 
-let state = loadConfig();
+let state = structuredClone(defaultConfig);
+
 if (state.version !== APP_VERSION) {
   state.version = APP_VERSION;
   saveConfig();
 }
-ensureRanges();
 
 const els = {
   tabs: document.querySelectorAll(".tab"),
@@ -100,9 +36,6 @@ const els = {
   closeProjectEditorBtn: document.getElementById("closeProjectEditorBtn")
 };
 
-function loadConfig() {
-  return structuredClone(defaultConfig);
-}
 
 function saveConfig() {
   // Local persistence intentionally disabled.
@@ -977,7 +910,11 @@ els.resetBtn.addEventListener("click", () => {
 });
 
 els.exportJsonBtn.addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const exportPayload = {
+    version: state.version || APP_VERSION,
+    projectTypes: state.projectTypes
+  };
+  const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1002,8 +939,25 @@ els.importJsonInput.addEventListener("change", async (e) => {
   }
 });
 
-refresh();
+async function initializeApp() {
+  try {
+    const response = await fetch(PROJECT_CONFIG_FILE, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Chargement impossible (${response.status})`);
+    const fileConfig = await response.json();
+    if (!Array.isArray(fileConfig.projectTypes)) throw new Error("Format de configuration invalide");
+    state = {
+      version: APP_VERSION,
+      projectTypes: fileConfig.projectTypes
+    };
+    ensureRanges();
+    refresh();
+  } catch (error) {
+    console.error(error);
+    alert(`Impossible de charger ${PROJECT_CONFIG_FILE}: ${error.message}`);
+  }
+}
 
+initializeApp();
 
 els.closeProjectEditorBtn?.addEventListener("click", closeProjectEditor);
 els.projectEditorModal?.addEventListener("click", (e) => { if (e.target.hasAttribute("data-close-modal")) closeProjectEditor(); });
