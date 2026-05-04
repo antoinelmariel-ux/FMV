@@ -1,5 +1,5 @@
 {
-  "version": "1.22.3",
+  "version": "1.22.4",
   "projectTypes": [
     {
       "id": "project-symposium",
@@ -81,7 +81,7 @@
               "value": "choix_3"
             }
           ],
-          "selectionMode": "multiple"
+          "selectionMode": "single"
         },
         {
           "id": "f94c6d1b-eae5-486a-b842-33d166194c36",
@@ -328,7 +328,7 @@
               "value": "choix_3"
             }
           ],
-          "selectionMode": "multiple"
+          "selectionMode": "single"
         },
         {
           "id": "1017e14d-9190-4535-bb03-2cd4cc902262",
@@ -683,7 +683,7 @@
               "value": "choix_3"
             }
           ],
-          "selectionMode": "multiple"
+          "selectionMode": "single"
         },
         {
           "id": "27648781-cae0-4528-9d20-2103f9afc81c",
