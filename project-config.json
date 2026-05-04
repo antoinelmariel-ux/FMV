@@ -1,5 +1,5 @@
 {
-  "version": "1.22.7",
+  "version": "1.22.8",
   "projectTypes": [
     {
       "id": "project-symposium",
@@ -204,7 +204,8 @@
           "multiplier": 1.1,
           "note": "",
           "participantIds": [
-            "participant-moderator"
+            "participant-moderator",
+            "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
           ],
           "expectedValues": [
             "Non"
@@ -546,7 +547,8 @@
           "multiplier": 1.1,
           "note": "",
           "participantIds": [
-            "4f774d37-b66c-4b29-aac5-ea385242c729"
+            "4f774d37-b66c-4b29-aac5-ea385242c729",
+            "df300a16-8538-4fca-bfad-e17ffea47bd5"
           ],
           "expectedValues": [
             "Non"
@@ -880,7 +882,8 @@
           "multiplier": 1.1,
           "note": "",
           "participantIds": [
-            "fa949497-a141-4842-bf47-2224741f22af"
+            "fa949497-a141-4842-bf47-2224741f22af",
+            "7c242979-a529-4adf-8771-7b11b5f49364"
           ],
           "expectedValues": [
             "Non"
