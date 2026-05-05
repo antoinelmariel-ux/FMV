@@ -1,5 +1,5 @@
 {
-  "version": "1.22.14",
+  "version": "1.22.15",
   "projectTypes": [
     {
       "id": "project-symposium",
@@ -76,6 +76,26 @@
             }
           ],
           "selectionMode": "single"
+        },
+        {
+          "id": "f5c9179d-e6ab-4f1e-8be9-5d23439e73d7",
+          "label": "La complexité du symposium nécessite-t-elle une préparation particulière côté modération ?",
+          "type": "select",
+          "key": "q_1777962837403",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_2"
+            },
+            {
+              "label": "Non",
+              "value": "choix_3"
+            },
+            {
+              "label": "Pas de modérateur prévu",
+              "value": "choix_1"
+            }
+          ]
         },
         {
           "id": "f94c6d1b-eae5-486a-b842-33d166194c36",
@@ -161,6 +181,10 @@
           "participantIds": [],
           "expectedValues": [
             "Standard"
+          ],
+          "targetParticipantIds": [
+            "participant-speaker",
+            "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
           ]
         },
         {
@@ -176,6 +200,10 @@
           "participantIds": [],
           "expectedValues": [
             "Élevé"
+          ],
+          "targetParticipantIds": [
+            "participant-speaker",
+            "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
           ]
         },
         {
@@ -239,6 +267,42 @@
             "participant-moderator",
             "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
           ],
+          "expectedValues": [
+            "choix_3"
+          ]
+        },
+        {
+          "id": "5c0d0a57-488f-4186-b39f-5cc7cbab5aac",
+          "questionKey": "q_1777962837403",
+          "operator": "in",
+          "expectedValue": "choix_2",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "stage-slides",
+          "targetParticipantIds": [
+            "participant-moderator"
+          ],
+          "note": "Privilégier le haut de la fourchette de temps du fait de la complexité de la modération",
+          "participantIds": [],
+          "expectedValues": [
+            "choix_2"
+          ]
+        },
+        {
+          "id": "bfa90e90-fde2-4d97-82b5-1b9636c91ed5",
+          "questionKey": "q_1777962837403",
+          "operator": "in",
+          "expectedValue": "choix_3",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "stage-slides",
+          "targetParticipantIds": [
+            "participant-moderator"
+          ],
+          "note": "Privilégier le bas de la fourchette de temps la complexité de la modération étant limitée",
+          "participantIds": [],
           "expectedValues": [
             "choix_3"
           ]
@@ -335,6 +399,26 @@
             }
           ],
           "selectionMode": "single"
+        },
+        {
+          "id": "b080436b-ec26-47c5-9850-4344284d48e1",
+          "label": "La complexité du symposium nécessite-t-elle une préparation particulière côté modération ?",
+          "type": "select",
+          "key": "q_1777963189742",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_1"
+            },
+            {
+              "label": "Non",
+              "value": "choix_2"
+            },
+            {
+              "label": "Pas de modérateur prévu",
+              "value": "choix_3"
+            }
+          ]
         },
         {
           "id": "1017e14d-9190-4535-bb03-2cd4cc902262",
@@ -475,17 +559,17 @@
           "fb9876cd-2459-48bd-b1f2-1a62ddbe9724": {
             "min": 0,
             "max": 2,
-            "note": "Assurez-vous d'avoir techniquement le temps et le lieux pour réaliser le filage"
+            "note": "Assurez-vous d'avoir techniquement le temps et le lieu pour réaliser le filage"
           },
           "4f774d37-b66c-4b29-aac5-ea385242c729": {
             "min": 0,
             "max": 2,
-            "note": "Assurez-vous d'avoir techniquement le temps et le lieux pour réaliser le filage"
+            "note": "Assurez-vous d'avoir techniquement le temps et le lieu pour réaliser le filage"
           },
           "df300a16-8538-4fca-bfad-e17ffea47bd5": {
             "min": 0,
             "max": 2,
-            "note": "Assurez-vous d'avoir techniquement le temps et le lieux pour réaliser le filage"
+            "note": "Assurez-vous d'avoir techniquement le temps et le lieu pour réaliser le filage"
           }
         }
       },
@@ -503,6 +587,10 @@
           "participantIds": [],
           "expectedValues": [
             "Standard"
+          ],
+          "targetParticipantIds": [
+            "fb9876cd-2459-48bd-b1f2-1a62ddbe9724",
+            "df300a16-8538-4fca-bfad-e17ffea47bd5"
           ]
         },
         {
@@ -518,6 +606,10 @@
           "participantIds": [],
           "expectedValues": [
             "Élevé"
+          ],
+          "targetParticipantIds": [
+            "fb9876cd-2459-48bd-b1f2-1a62ddbe9724",
+            "df300a16-8538-4fca-bfad-e17ffea47bd5"
           ]
         },
         {
@@ -614,6 +706,42 @@
           "expectedValues": [
             "choix_3"
           ]
+        },
+        {
+          "id": "8d98b3dc-7f59-4cc8-85a9-58f70a938ccc",
+          "questionKey": "q_1777963189742",
+          "operator": "in",
+          "expectedValue": "choix_1",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "65843924-cbb6-42ea-ab60-512afed36680",
+          "targetParticipantIds": [
+            "4f774d37-b66c-4b29-aac5-ea385242c729"
+          ],
+          "note": "Privilégier le haut de la fourchette de temps du fait de la complexité de la modération",
+          "participantIds": [],
+          "expectedValues": [
+            "choix_1"
+          ]
+        },
+        {
+          "id": "5e7d4e24-b606-47b4-baee-a002c659121b",
+          "questionKey": "q_1777963189742",
+          "operator": "in",
+          "expectedValue": "choix_2",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "65843924-cbb6-42ea-ab60-512afed36680",
+          "targetParticipantIds": [
+            "4f774d37-b66c-4b29-aac5-ea385242c729"
+          ],
+          "note": "Privilégier le bas de la fourchette de temps la complexité de la modération étant limitée",
+          "participantIds": [],
+          "expectedValues": [
+            "choix_2"
+          ]
         }
       ]
     },
@@ -702,6 +830,26 @@
             }
           ],
           "selectionMode": "single"
+        },
+        {
+          "id": "bf5f6126-5c11-43da-bd25-ce58483dda06",
+          "label": "La complexité du symposium nécessite-t-elle une préparation particulière côté modération ?",
+          "type": "select",
+          "key": "q_1777963408444",
+          "options": [
+            {
+              "label": "Oui",
+              "value": "choix_1"
+            },
+            {
+              "label": "Non",
+              "value": "choix_2"
+            },
+            {
+              "label": "Pas de modérateur prévu",
+              "value": "choix_3"
+            }
+          ]
         },
         {
           "id": "27648781-cae0-4528-9d20-2103f9afc81c",
@@ -837,6 +985,10 @@
           "participantIds": [],
           "expectedValues": [
             "Standard"
+          ],
+          "targetParticipantIds": [
+            "2ae37f0d-13e7-47ce-b949-5205cbb1e920",
+            "7c242979-a529-4adf-8771-7b11b5f49364"
           ]
         },
         {
@@ -852,6 +1004,10 @@
           "participantIds": [],
           "expectedValues": [
             "Élevé"
+          ],
+          "targetParticipantIds": [
+            "2ae37f0d-13e7-47ce-b949-5205cbb1e920",
+            "7c242979-a529-4adf-8771-7b11b5f49364"
           ]
         },
         {
@@ -932,6 +1088,42 @@
           ],
           "expectedValues": [
             "choix_3"
+          ]
+        },
+        {
+          "id": "5b52edf5-44c3-4c74-b54b-ebd8aaff5112",
+          "questionKey": "q_1777963408444",
+          "operator": "in",
+          "expectedValue": "choix_1",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "d66ba486-06ff-4786-b5bd-e629f8b9eae8",
+          "targetParticipantIds": [
+            "fa949497-a141-4842-bf47-2224741f22af"
+          ],
+          "note": "Privilégier le haut de la fourchette de temps du fait de la complexité de la modération",
+          "participantIds": [],
+          "expectedValues": [
+            "choix_1"
+          ]
+        },
+        {
+          "id": "751ed8e5-6fa8-4f32-b508-b0abbce44d65",
+          "questionKey": "q_1777963408444",
+          "operator": "in",
+          "expectedValue": "choix_2",
+          "scope": "stage",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "d66ba486-06ff-4786-b5bd-e629f8b9eae8",
+          "targetParticipantIds": [
+            "fa949497-a141-4842-bf47-2224741f22af"
+          ],
+          "note": "Privilégier le bas de la fourchette de temps la complexité de la modération étant limitée",
+          "participantIds": [],
+          "expectedValues": [
+            "choix_2"
           ]
         }
       ]
