@@ -300,3 +300,15 @@ footer {
 @keyframes spin-loader {
   to { transform: rotate(360deg); }
 }
+
+
+.number-range-editor{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;background:#f8fbff;border:1px dashed var(--border);border-radius:10px}
+.participant-select-field{display:grid;gap:8px;align-content:start}
+.participant-select-field .field-title{font-weight:600;color:var(--accent)}
+.participant-select-field .field-title small{font-weight:400;color:var(--muted)}
+.participant-pills{display:flex;flex-wrap:wrap;gap:8px}
+.participant-pills label{display:inline-flex;align-items:center;gap:8px;width:auto;padding:7px 10px;background:#fff;border:1px solid var(--border);border-radius:999px;color:var(--text);line-height:1.1;cursor:pointer}
+.participant-pills input{width:auto;margin:0}
+.global-comments{padding:14px 16px;border:1px solid #bfd7ff;border-left:5px solid var(--accent);border-radius:12px;background:#f4f8ff}
+.global-comments h3{margin-top:0}
+.global-comments ul{margin-bottom:0}
