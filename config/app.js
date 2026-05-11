@@ -1,4 +1,4 @@
-const APP_VERSION = "1.23.0";
+const APP_VERSION = "1.24.0";
 const PROJECT_CONFIG_FILE = "config/project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -1030,6 +1030,7 @@ function exportRecommendationXlsx() {
   a.download = `${sanitizeFileName(recommendation.projectName || "recommandation")}-recommandation.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
+  alert("Dans le fichier Excel, indiquez le nombre d’heures finalement retenus et une éventuelle description de l’étape avant de transmettre ce fichier à l’équipe Événementiel pour qu’elle puisse préparer les contrats et ajouter ce fichier à MyEvent.");
 }
 
 function createXlsxWorkbook(sheets) {
@@ -1074,14 +1075,15 @@ function xlsxStyles() {
 }
 
 function xlsxWorksheet(sheet) {
+  const contractDescriptionHeader = "Description de l’étape pour insertion dans le contrat";
   const dataRows = sheet.rows.map((row, index) => {
     const rowNumber = index + 4;
-    return `<row r="${rowNumber}" ht="32" customHeight="1">${cell(`A${rowNumber}`, row.stage)}${cell(`B${rowNumber}`, row.min, 3, "n")}${cell(`C${rowNumber}`, row.max, 3, "n")}${cell(`D${rowNumber}`, row.justification)}${cell(`E${rowNumber}`, "")}</row>`;
+    return `<row r="${rowNumber}" ht="32" customHeight="1">${cell(`A${rowNumber}`, row.stage)}${cell(`B${rowNumber}`, row.min, 3, "n")}${cell(`C${rowNumber}`, row.max, 3, "n")}${cell(`D${rowNumber}`, row.justification)}${cell(`E${rowNumber}`, "")}${cell(`F${rowNumber}`, "")}</row>`;
   }).join("");
   const totalRow = sheet.rows.length + 5;
   const decisionStartRow = 4;
   const decisionEndRow = Math.max(decisionStartRow, sheet.rows.length + 3);
-  return xmlDeclaration() + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="30" customWidth="1"/><col min="2" max="3" width="12" customWidth="1"/><col min="4" max="4" width="62" customWidth="1"/><col min="5" max="5" width="16" customWidth="1"/></cols><sheetData><row r="1" ht="28" customHeight="1">${cell("A1", "Participants concernés :", 2)}${cell("B1", "", 0)}${cell("C1", "", 0)}${cell("D1", "", 0)}${cell("E1", "", 0)}</row><row r="2"/><row r="3" ht="24" customHeight="1">${cell("A3", "Étape", 1)}${cell("B3", "Min", 1)}${cell("C3", "Max", 1)}${cell("D3", "Justification", 1)}${cell("E3", "Décision", 1)}</row>${dataRows}<row r="${totalRow}" ht="26" customHeight="1">${cell(`A${totalRow}`, "")}${cell(`B${totalRow}`, "")}${cell(`C${totalRow}`, "")}${cell(`D${totalRow}`, "Total d'heures retenues", 4)}${formulaCell(`E${totalRow}`, `SUM(E${decisionStartRow}:E${decisionEndRow})`, 5)}</row></sheetData><mergeCells count="1"><mergeCell ref="A1:E1"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>`;
+  return xmlDeclaration() + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="30" customWidth="1"/><col min="2" max="3" width="12" customWidth="1"/><col min="4" max="4" width="62" customWidth="1"/><col min="5" max="5" width="16" customWidth="1"/><col min="6" max="6" width="48" customWidth="1"/></cols><sheetData><row r="1" ht="28" customHeight="1">${cell("A1", "Participants concernés :", 2)}${cell("B1", "", 0)}${cell("C1", "", 0)}${cell("D1", "", 0)}${cell("E1", "", 0)}${cell("F1", "", 0)}</row><row r="2"/><row r="3" ht="24" customHeight="1">${cell("A3", "Étape", 1)}${cell("B3", "Min", 1)}${cell("C3", "Max", 1)}${cell("D3", "Justification", 1)}${cell("E3", "Décision", 1)}${cell("F3", contractDescriptionHeader, 1)}</row>${dataRows}<row r="${totalRow}" ht="26" customHeight="1">${cell(`A${totalRow}`, "")}${cell(`B${totalRow}`, "")}${cell(`C${totalRow}`, "")}${cell(`D${totalRow}`, "Total d'heures retenues", 4)}${formulaCell(`E${totalRow}`, `SUM(E${decisionStartRow}:E${decisionEndRow})`, 5)}${cell(`F${totalRow}`, "")}</row></sheetData><mergeCells count="1"><mergeCell ref="A1:F1"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>`;
 }
 
 function cell(ref, value, style = 0, type = "str") {
