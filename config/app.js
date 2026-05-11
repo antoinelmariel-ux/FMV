@@ -1,5 +1,5 @@
-const APP_VERSION = "1.22.15";
-const PROJECT_CONFIG_FILE = "project-config.json";
+const APP_VERSION = "1.22.16";
+const PROJECT_CONFIG_FILE = "config/project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
 const ADMIN_PASSWORD = "FMV2026et+";
