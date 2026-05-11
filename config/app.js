@@ -1,4 +1,4 @@
-const APP_VERSION = "1.24.0";
+const APP_VERSION = "1.25.0";
 const PROJECT_CONFIG_FILE = "config/project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -65,6 +65,11 @@ function ensureEntityValues(project) {
 }
 function normalizeQuestionOptions(project) {
   for (const question of project.questions || []) {
+    if (question.type === "number") {
+      if (question.min === undefined || question.min === null || question.min === "") question.min = 0;
+      if (question.max === undefined || question.max === null || question.max === "") question.max = 100;
+      continue;
+    }
     if (question.type !== "select") continue;
     question.options = (question.options || []).map((opt) => {
       if (typeof opt === "string") return { label: opt, value: opt };
@@ -223,7 +228,10 @@ function renderQuestionnaire() {
         const opts = (q.options || []).map((o) => `<option value="${o.value}">${o.label}</option>`).join("");
         return `<label>${q.label}<select name="${q.key}">${opts}</select></label>`;
       }
-      return `<label>${q.label}<input type="number" step="0.1" name="${q.key}" value="0"/></label>`;
+      const minAttr = q.min !== undefined && q.min !== null && q.min !== "" ? ` min="${q.min}"` : "";
+      const maxAttr = q.max !== undefined && q.max !== null && q.max !== "" ? ` max="${q.max}"` : "";
+      const defaultValue = q.min !== undefined && q.min !== null && q.min !== "" ? q.min : 0;
+      return `<label>${q.label}<input type="number" step="0.1" name="${q.key}" value="${defaultValue}"${minAttr}${maxAttr}/></label>`;
     })
     .join("");
 }
@@ -237,6 +245,7 @@ function clearRecommendation() {
 function evaluateModifier(mod, answers) {
   const actual = answers[mod.questionKey];
   if (mod.operator === ">") return Number(actual) > Number(mod.expectedValue);
+  if (mod.operator === "<=") return Number(actual) <= Number(mod.expectedValue);
   if (mod.operator === "not_in") {
     const expectedValues = Array.isArray(mod.expectedValues) ? mod.expectedValues : [mod.expectedValue];
     if (Array.isArray(actual)) return actual.every((v) => !expectedValues.map(String).includes(String(v)));
@@ -263,6 +272,7 @@ function collectAnswers(project) {
 function buildRecommendation(project, answers) {
   let globalMultiplier = 1;
   const globalNotes = [];
+  const globalComments = [];
   const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [], hiddenParticipants: new Set(), participantMultipliers: new Map(), participantNotes: new Map() }]));
 
   const resolveStageId = (mod) => mod.stageId || project.stages.find((s) => s.label === mod.stageRef)?.id;
@@ -333,12 +343,12 @@ function buildRecommendation(project, answers) {
     }
 
     if (effect === "commentStage") {
+      if ((mod.scope || "global") === "global" && targetParticipants.length === project.participants.length) {
+        globalComments.push(note);
+        continue;
+      }
       targetStages.forEach((stageId) => {
         const stageState = stageEffects.get(stageId);
-        if ((mod.scope || "global") === "global" && targetParticipants.length === project.participants.length) {
-          globalNotes.push(note);
-          return;
-        }
         targetParticipants.forEach((participantId) => {
           const participantNotes = stageState.participantNotes.get(participantId) || [];
           participantNotes.push(note);
@@ -396,6 +406,7 @@ function buildRecommendation(project, answers) {
     answers,
     sections,
     participants: participantTotals,
+    globalComments,
     globalMin: round1(globalMin),
     globalMax: round1(globalMax)
   };
@@ -426,9 +437,14 @@ function computeRecommendation() {
     .map((totals) => `<tr><td>${totals.label}</td><td>${totals.min} h</td><td>${totals.max} h</td></tr>`)
     .join("");
 
+  const globalCommentBlock = lastRecommendation.globalComments?.length
+    ? `<div class="global-comments"><h3>Commentaires globaux</h3><ul>${lastRecommendation.globalComments.map((note) => `<li>${note}</li>`).join("")}</ul></div>`
+    : "";
+
   els.reportOutput.innerHTML = `
     <div class="report-grid">
       <p><strong>Projet:</strong> ${lastRecommendation.projectName}</p>
+      ${globalCommentBlock}
       ${sections.join("")}
       <table>
         <thead><tr><th>Total recommandé</th><th>Min total</th><th>Max total</th></tr></thead>
@@ -528,6 +544,10 @@ function renderAdmin(projectIdToOpen = null) {
               <option value="multiple" ${q.selectionMode === "multiple" ? "selected" : ""}>Choix multiple</option>
             </select>
           </div>
+          <div class="number-range-editor">
+            <label>Min <input class="question-min" type="number" step="0.1" value="${q.min ?? 0}" /></label>
+            <label>Max <input class="question-max" type="number" step="0.1" value="${q.max ?? 100}" /></label>
+          </div>
           <div class="choice-options-editor">
             <div class="choice-option-list"></div>
             <button type="button" class="btn small add-option">+ Ajouter un choix</button>
@@ -538,10 +558,13 @@ function renderAdmin(projectIdToOpen = null) {
       const labelInput = wrapper.querySelector("input");
       const typeInput = wrapper.querySelector(".question-type");
       const modeInput = wrapper.querySelector(".selection-mode");
+      const minInput = wrapper.querySelector(".question-min");
+      const maxInput = wrapper.querySelector(".question-max");
       const toggleOptionsInput = () => {
         const isNumber = typeInput.value === "number";
         wrapper.querySelector(".selection-mode").style.display = isNumber ? "none" : "block";
         wrapper.querySelector(".choice-options-editor").style.display = isNumber ? "none" : "grid";
+        wrapper.querySelector(".number-range-editor").style.display = isNumber ? "grid" : "none";
       };
       const optionList = wrapper.querySelector(".choice-option-list");
       const renderOptions = () => {
@@ -564,10 +587,16 @@ function renderAdmin(projectIdToOpen = null) {
       });
       renderOptions();
       labelInput.addEventListener("input", () => { q.label = labelInput.value; saveConfig(); renderQuestionnaire(); });
+      minInput.addEventListener("input", () => { q.min = Number(minInput.value || 0); saveConfig(); renderQuestionnaire(); });
+      maxInput.addEventListener("input", () => { q.max = Number(maxInput.value || 0); saveConfig(); renderQuestionnaire(); });
       modeInput.addEventListener("change", () => { q.selectionMode = modeInput.value; saveConfig(); renderQuestionnaire(); });
       typeInput.addEventListener("change", () => {
         q.type = typeInput.value;
-        if (q.type === "number") q.options = [];
+        if (q.type === "number") {
+          q.options = [];
+          q.min ??= 0;
+          q.max ??= 100;
+        }
         toggleOptionsInput();
         saveConfig();
         renderQuestionnaire();
@@ -726,18 +755,20 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       <label class="multiplier-field">Coefficient
         <input type="number" step="0.05" min="0" data-k="multiplier" value="${mod.multiplier ?? 1}" />
       </label>
-      <label class="target-participant-field">Participants ciblés (optionnel)
-        <div class="target-participant-checkboxes">${(project.participants||[]).map(p=>`<label><input type="checkbox" value="${p.id}" ${(mod.targetParticipantIds||[]).includes(p.id) ? "checked" : ""}/> ${p.label}</label>`).join("")}</div>
-      </label>
+      <div class="target-participant-field participant-select-field">
+        <span class="field-title">Participants ciblés <small>(optionnel)</small></span>
+        <div class="target-participant-checkboxes participant-pills">${(project.participants||[]).map(p=>`<label><input type="checkbox" value="${p.id}" ${(mod.targetParticipantIds||[]).includes(p.id) ? "checked" : ""}/> <span>${p.label}</span></label>`).join("")}</div>
+      </div>
       <label class="stage-field">Étape cible
         <select data-k="stageId">
           <option value="">Choisir une étape</option>
           ${stageOptions}
         </select>
       </label>
-      <label class="effect-participant">Participants à masquer
-        <div class="participant-checkboxes">${(project.participants||[]).map(p=>`<label><input type="checkbox" value="${p.id}" ${(mod.participantIds||[]).includes(p.id) ? "checked" : ""}/> ${p.label}</label>`).join("")}</div>
-      </label>
+      <div class="effect-participant participant-select-field">
+        <span class="field-title">Participants à masquer</span>
+        <div class="participant-checkboxes participant-pills">${(project.participants||[]).map(p=>`<label><input type="checkbox" value="${p.id}" ${(mod.participantIds||[]).includes(p.id) ? "checked" : ""}/> <span>${p.label}</span></label>`).join("")}</div>
+      </div>
       <label class="effect-row-break">Note visible côté utilisateur
         <input data-k="note" value="${mod.note || ""}" />
       </label>
@@ -759,7 +790,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
     const targetParticipantField = row.querySelector(".target-participant-field");
 
     qSelect.value = mod.questionKey || project.questions?.[0]?.key || "";
-    opSelect.value = mod.operator === ">" ? ">" : (mod.operator === "not_in" ? "not_in" : "in");
+    opSelect.value = mod.operator === ">" ? ">" : (mod.operator === "<=" ? "<=" : (mod.operator === "not_in" ? "not_in" : "in"));
     scopeSelect.value = mod.scope === "stage" ? "stage" : "global";
     effectSelect.value = mod.effect || "multiply";
     stageSelect.value = mod.stageId || project.stages?.find((s) => s.label === mod.stageRef)?.id || "";
@@ -780,8 +811,11 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
         expectedInput.style.display = "block";
         expectedValuesNode.innerHTML = "";
       } else {
-        opSelect.innerHTML = `<option value=">">Supérieure à</option>`;
-        mod.operator = ">";
+        opSelect.innerHTML = `
+          <option value=">">Supérieure à</option>
+          <option value="<=">Inférieure ou égale</option>
+        `;
+        if (![">", "<="].includes(mod.operator)) mod.operator = ">";
         opSelect.value = mod.operator;
         expectedValuesNode.innerHTML = `<input type="number" step="0.1" value="${mod.expectedValue ?? 0}" />`;
         expectedValuesNode.querySelector("input")?.addEventListener("input", normalizeAndSave);
@@ -807,7 +841,7 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
       const questionType = project.questions?.find((q) => q.key === mod.questionKey)?.type;
       const numericExpected = expectedValuesNode.querySelector('input[type="number"]');
       mod.expectedValue = questionType === "number" ? Number(numericExpected?.value || 0) : expectedInput.value;
-      if (["excludeStage", "commentStage"].includes(effectSelect.value)) {
+      if (effectSelect.value === "excludeStage") {
         scopeSelect.value = "stage";
       }
       mod.scope = scopeSelect.value;
@@ -823,8 +857,9 @@ const getQuestionByKey = (key) => (project.questions || []).find((q) => q.key ==
 
     controls.forEach((ctrl) => ctrl.addEventListener("input", normalizeAndSave));
     controls.forEach((ctrl) => ctrl.addEventListener("change", () => {
+      normalizeAndSave();
       populateExpectedValues();
-    syncUi();
+      syncUi();
       normalizeAndSave();
     }));
     row.querySelectorAll(".participant-checkboxes input").forEach((cb) => cb.addEventListener("change", normalizeAndSave));
@@ -873,13 +908,16 @@ function buildModifierPreview(project) {
     <ul class="helper-list">
       ${project.modifiers.map((mod) => {
         const question = project.questions.find((q) => q.key === mod.questionKey)?.label || mod.questionKey;
-        const operator = mod.operator === ">" ? ">" : "=";
+        const operator = mod.operator === ">" ? ">" : (mod.operator === "<=" ? "≤" : (mod.operator === "not_in" ? "≠" : "="));
         const scope = mod.scope === "stage" ? "sur une étape" : "globalement";
         if ((mod.effect || "multiply") === "excludeStage") {
           const stageLabel = project.stages.find((s) => s.id === mod.stageId)?.label || mod.stageRef || "étape cible";
           return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, alors l'étape <strong>${stageLabel}</strong> est retirée.</li>`;
         }
         if ((mod.effect || "multiply") === "commentStage") {
+          if ((mod.scope || "global") === "global") {
+            return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, afficher un commentaire global en début de recommandation.</li>`;
+          }
           const stageLabel = project.stages.find((s) => s.id === mod.stageId)?.label || mod.stageRef || "étape cible";
           return `<li>Si <strong>${question}</strong> ${operator} <strong>${mod.expectedValue}</strong>, afficher un commentaire sur l'étape <strong>${stageLabel}</strong>.</li>`;
         }
@@ -1210,7 +1248,7 @@ els.addProjectBtn.addEventListener("click", () => {
     description: "",
     stages: (() => { const id = crypto.randomUUID(); return [{ id, label: "Étape 1", value: id }]; })(),
     participants: (() => { const id = crypto.randomUUID(); return [{ id, label: "Participant 1", value: id }]; })(),
-    questions: [{ id: crypto.randomUUID(), label: "Durée (minutes)", type: "number", key: "duration" }],
+    questions: [{ id: crypto.randomUUID(), label: "Durée (minutes)", type: "number", key: "duration", min: 0, max: 100 }],
     ranges: {},
     modifiers: []
   });
