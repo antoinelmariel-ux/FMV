@@ -246,7 +246,7 @@ footer {
 }
 @media print {
   body { background: white; color: #111; }
-  .topbar, #adminSpace, #calculateBtn, #exportPdfBtn, footer { display: none !important; }
+  .topbar, #adminSpace, #calculateBtn, #exportXlsxBtn, footer { display: none !important; }
   .card { border: 0; background: white; padding: 0; }
   #userSpace { display: block !important; }
 }

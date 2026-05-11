@@ -1,10 +1,11 @@
-const APP_VERSION = "1.22.17";
+const APP_VERSION = "1.23.0";
 const PROJECT_CONFIG_FILE = "config/project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
 const ADMIN_PASSWORD = "FMV2026et+";
 let activeEditorProjectId = null;
 const editorStepByProjectId = new Map();
+let lastRecommendation = null;
 
 const defaultConfig = {
   version: APP_VERSION,
@@ -25,7 +26,7 @@ const els = {
   questionnaireForm: document.getElementById("questionnaireForm"),
   calculateBtn: document.getElementById("calculateBtn"),
   reportOutput: document.getElementById("reportOutput"),
-  exportPdfBtn: document.getElementById("exportPdfBtn"),
+  exportXlsxBtn: document.getElementById("exportXlsxBtn"),
   adminProjectsOverview: document.getElementById("adminProjectsOverview"),
   adminProjects: document.getElementById("adminProjects"),
   addProjectBtn: document.getElementById("addProjectBtn"),
@@ -229,6 +230,7 @@ function renderQuestionnaire() {
 
 
 function clearRecommendation() {
+  lastRecommendation = null;
   els.reportOutput.innerHTML = '<div class="report-empty">Aucune recommandation calculée.</div>';
 }
 
@@ -245,10 +247,7 @@ function evaluateModifier(mod, answers) {
   return expectedValues.map(String).includes(String(actual));
 }
 
-function computeRecommendation() {
-  const project = getCurrentProject();
-  if (!project) return;
-
+function collectAnswers(project) {
   const data = new FormData(els.questionnaireForm);
   const answers = {};
   for (const question of project.questions || []) {
@@ -258,7 +257,10 @@ function computeRecommendation() {
       answers[question.key] = data.get(question.key);
     }
   }
+  return answers;
+}
 
+function buildRecommendation(project, answers) {
   let globalMultiplier = 1;
   const globalNotes = [];
   const stageEffects = new Map(project.stages.map((s) => [s.id, { multiplier: 1, excluded: false, notes: [], hiddenParticipants: new Set(), participantMultipliers: new Map(), participantNotes: new Map() }]));
@@ -349,15 +351,13 @@ function computeRecommendation() {
   const sections = [];
   let globalMin = 0;
   let globalMax = 0;
-  const totalsByParticipant = new Map(project.participants.map((p) => [p.id, { label: p.label, min: 0, max: 0 }]));
+  const participants = new Map(project.participants.map((p) => [p.id, { id: p.id, label: p.label, min: 0, max: 0, rows: [] }]));
 
   for (const stage of project.stages) {
     const stageState = stageEffects.get(stage.id) || { multiplier: 1, excluded: false, notes: [] };
-    if (stageState.excluded) {
-      continue;
-    }
+    if (stageState.excluded) continue;
 
-    let rows = "";
+    const rows = [];
     for (const participant of project.participants) {
       if (stageState.hiddenParticipants?.has(participant.id)) continue;
       const base = project.ranges?.[stage.id]?.[participant.id] || { min: 0, max: 0, note: "" };
@@ -367,48 +367,77 @@ function computeRecommendation() {
       const max = round1(Number(base.max) * effectiveMultiplier);
       globalMin += min;
       globalMax += max;
-      const participantTotals = totalsByParticipant.get(participant.id);
-      if (participantTotals) {
-        participantTotals.min += min;
-        participantTotals.max += max;
-      }
       const justificationParts = [];
       if (base.note) justificationParts.push(base.note);
       if (stageState.notes.length) justificationParts.push(stageState.notes.join(" · "));
       const participantNotes = stageState.participantNotes?.get(participant.id) || [];
       if (participantNotes.length) justificationParts.push(participantNotes.join(" · "));
-      if (globalNotes.length) {
-        justificationParts.push(`Modificateurs globaux: ${globalNotes.join(" · ")}`);
+      if (globalNotes.length) justificationParts.push(`Modificateurs globaux: ${globalNotes.join(" · ")}`);
+      const row = { stage: stage.label, participant: participant.label, min, max, justification: justificationParts.join(" | ") || "—" };
+      rows.push(row);
+      const participantRecommendation = participants.get(participant.id);
+      if (participantRecommendation) {
+        participantRecommendation.min += min;
+        participantRecommendation.max += max;
+        participantRecommendation.rows.push(row);
       }
-      rows += `<tr><td>${participant.label}</td><td>${min} h</td><td>${max} h</td><td>${justificationParts.join(" | ") || "—"}</td></tr>`;
     }
-    sections.push(`
+    sections.push({ stage: stage.label, rows });
+  }
+
+  const participantTotals = Array.from(participants.values()).map((participant) => ({
+    ...participant,
+    min: round1(participant.min),
+    max: round1(participant.max)
+  }));
+
+  return {
+    projectName: project.name,
+    answers,
+    sections,
+    participants: participantTotals,
+    globalMin: round1(globalMin),
+    globalMax: round1(globalMax)
+  };
+}
+
+function computeRecommendation() {
+  const project = getCurrentProject();
+  if (!project) return null;
+
+  lastRecommendation = buildRecommendation(project, collectAnswers(project));
+  const sections = lastRecommendation.sections.map((section) => {
+    const rows = section.rows
+      .map((row) => `<tr><td>${row.participant}</td><td>${row.min} h</td><td>${row.max} h</td><td>${row.justification}</td></tr>`)
+      .join("");
+    return `
       <div>
-        <h3 class="stage-title">${stage.label}</h3>
-        
+        <h3 class="stage-title">${section.stage}</h3>
         <table>
           <thead><tr><th>Participant</th><th>Min</th><th>Max</th><th>Justification</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-    `);
-  }
+    `;
+  });
 
-  const totalRows = Array.from(totalsByParticipant.values())
+  const totalRows = lastRecommendation.participants
     .filter((totals) => totals.min > 0 || totals.max > 0)
-    .map((totals) => `<tr><td>${totals.label}</td><td>${round1(totals.min)} h</td><td>${round1(totals.max)} h</td></tr>`)
+    .map((totals) => `<tr><td>${totals.label}</td><td>${totals.min} h</td><td>${totals.max} h</td></tr>`)
     .join("");
 
   els.reportOutput.innerHTML = `
     <div class="report-grid">
-      <p><strong>Projet:</strong> ${project.name}</p>
+      <p><strong>Projet:</strong> ${lastRecommendation.projectName}</p>
       ${sections.join("")}
       <table>
         <thead><tr><th>Total recommandé</th><th>Min total</th><th>Max total</th></tr></thead>
-        <tbody>${totalRows || `<tr><td>—</td><td>${round1(globalMin)} h</td><td>${round1(globalMax)} h</td></tr>`}</tbody>
+        <tbody>${totalRows || `<tr><td>—</td><td>${lastRecommendation.globalMin} h</td><td>${lastRecommendation.globalMax} h</td></tr>`}</tbody>
       </table>
       <p class="report-warning">Soyez vigilants au nombre d’heures car au-dessus de 2000€, nous passons en régime d’autorisation</p>
     </div>`;
+
+  return lastRecommendation;
 }
 
 function round1(n) {
@@ -975,6 +1004,179 @@ function renderEntityChip(value, onDelete, onEdit, onUp, onDown) {
   return div;
 }
 
+function exportRecommendationXlsx() {
+  const project = getCurrentProject();
+  if (!project) return;
+  const recommendation = computeRecommendation();
+  if (!recommendation) return;
+
+  const sheets = recommendation.participants
+    .map((participant) => ({
+      name: participant.label,
+      rows: participant.rows,
+      totalMin: participant.min,
+      totalMax: participant.max
+    }));
+
+  if (!sheets.length) {
+    alert("Aucun type de participant à exporter pour ce projet.");
+    return;
+  }
+
+  const workbookBlob = createXlsxWorkbook(sheets);
+  const url = URL.createObjectURL(workbookBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${sanitizeFileName(recommendation.projectName || "recommandation")}-recommandation.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function createXlsxWorkbook(sheets) {
+  const usedNames = new Set();
+  const normalizedSheets = sheets.map((sheet, index) => ({
+    ...sheet,
+    safeName: getUniqueSheetName(sheet.name || `Participant ${index + 1}`, usedNames)
+  }));
+  const files = [];
+  files.push({ name: "[Content_Types].xml", content: xlsxContentTypes(normalizedSheets.length) });
+  files.push({ name: "_rels/.rels", content: xlsxRootRels() });
+  files.push({ name: "xl/workbook.xml", content: xlsxWorkbook(normalizedSheets) });
+  files.push({ name: "xl/_rels/workbook.xml.rels", content: xlsxWorkbookRels(normalizedSheets.length) });
+  files.push({ name: "xl/styles.xml", content: xlsxStyles() });
+  normalizedSheets.forEach((sheet, index) => {
+    files.push({ name: `xl/worksheets/sheet${index + 1}.xml`, content: xlsxWorksheet(sheet) });
+  });
+  return zipFiles(files);
+}
+
+function xlsxContentTypes(sheetCount) {
+  const sheetOverrides = Array.from({ length: sheetCount }, (_, index) => `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("");
+  return xmlDeclaration() + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheetOverrides}</Types>`;
+}
+
+function xlsxRootRels() {
+  return xmlDeclaration() + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+}
+
+function xlsxWorkbook(sheets) {
+  const sheetNodes = sheets.map((sheet, index) => `<sheet name="${escapeXml(sheet.safeName)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`).join("");
+  return xmlDeclaration() + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetNodes}</sheets><calcPr fullCalcOnLoad="1"/></workbook>`;
+}
+
+function xlsxWorkbookRels(sheetCount) {
+  const sheetRels = Array.from({ length: sheetCount }, (_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`).join("");
+  return xmlDeclaration() + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheetRels}<Relationship Id="rId${sheetCount + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+}
+
+function xlsxStyles() {
+  return xmlDeclaration() + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="12"/><color rgb="FF1F2937"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2563EB"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF16A34A"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD1D5DB"/></left><right style="thin"><color rgb="FFD1D5DB"/></right><top style="thin"><color rgb="FFD1D5DB"/></top><bottom style="thin"><color rgb="FFD1D5DB"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="2" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center" vertical="top"/></xf><xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf><xf numFmtId="2" fontId="3" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+}
+
+function xlsxWorksheet(sheet) {
+  const dataRows = sheet.rows.map((row, index) => {
+    const rowNumber = index + 4;
+    return `<row r="${rowNumber}" ht="32" customHeight="1">${cell(`A${rowNumber}`, row.stage)}${cell(`B${rowNumber}`, row.min, 3, "n")}${cell(`C${rowNumber}`, row.max, 3, "n")}${cell(`D${rowNumber}`, row.justification)}${cell(`E${rowNumber}`, "")}</row>`;
+  }).join("");
+  const totalRow = sheet.rows.length + 5;
+  const decisionStartRow = 4;
+  const decisionEndRow = Math.max(decisionStartRow, sheet.rows.length + 3);
+  return xmlDeclaration() + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="30" customWidth="1"/><col min="2" max="3" width="12" customWidth="1"/><col min="4" max="4" width="62" customWidth="1"/><col min="5" max="5" width="16" customWidth="1"/></cols><sheetData><row r="1" ht="28" customHeight="1">${cell("A1", "Participants concernés :", 2)}${cell("B1", "", 0)}${cell("C1", "", 0)}${cell("D1", "", 0)}${cell("E1", "", 0)}</row><row r="2"/><row r="3" ht="24" customHeight="1">${cell("A3", "Étape", 1)}${cell("B3", "Min", 1)}${cell("C3", "Max", 1)}${cell("D3", "Justification", 1)}${cell("E3", "Décision", 1)}</row>${dataRows}<row r="${totalRow}" ht="26" customHeight="1">${cell(`A${totalRow}`, "")}${cell(`B${totalRow}`, "")}${cell(`C${totalRow}`, "")}${cell(`D${totalRow}`, "Total d'heures retenues", 4)}${formulaCell(`E${totalRow}`, `SUM(E${decisionStartRow}:E${decisionEndRow})`, 5)}</row></sheetData><mergeCells count="1"><mergeCell ref="A1:E1"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>`;
+}
+
+function cell(ref, value, style = 0, type = "str") {
+  if (type === "n") return `<c r="${ref}" s="${style}"><v>${Number(value || 0)}</v></c>`;
+  return `<c r="${ref}" s="${style}" t="inlineStr"><is><t>${escapeXml(String(value ?? ""))}</t></is></c>`;
+}
+
+function formulaCell(ref, formula, style = 0) {
+  return `<c r="${ref}" s="${style}"><f>${escapeXml(formula)}</f></c>`;
+}
+
+function xmlDeclaration() {
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+}
+
+function escapeXml(value) {
+  return String(value).replace(/[<>&"']/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[char]));
+}
+
+function sanitizeFileName(name) {
+  return String(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "recommandation";
+}
+
+function getUniqueSheetName(name, usedNames) {
+  const base = String(name).replace(/[\\/?*\[\]:]/g, " ").replace(/\s+/g, " ").trim().slice(0, 31) || "Participant";
+  let candidate = base;
+  let suffix = 1;
+  while (usedNames.has(candidate.toLowerCase())) {
+    const marker = ` ${suffix}`;
+    candidate = `${base.slice(0, 31 - marker.length)}${marker}`;
+    suffix += 1;
+  }
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
+}
+
+function zipFiles(files) {
+  const chunks = [];
+  const centralDirectory = [];
+  let offset = 0;
+  files.forEach((file) => {
+    const nameBytes = utf8Bytes(file.name);
+    const contentBytes = utf8Bytes(file.content);
+    const crc = crc32(contentBytes);
+    const localHeader = concatBytes(uint32(0x04034b50), uint16(20), uint16(0), uint16(0), uint16(0), uint16(0), uint32(crc), uint32(contentBytes.length), uint32(contentBytes.length), uint16(nameBytes.length), uint16(0), nameBytes);
+    chunks.push(localHeader, contentBytes);
+    const centralHeader = concatBytes(uint32(0x02014b50), uint16(20), uint16(20), uint16(0), uint16(0), uint16(0), uint16(0), uint32(crc), uint32(contentBytes.length), uint32(contentBytes.length), uint16(nameBytes.length), uint16(0), uint16(0), uint16(0), uint16(0), uint32(0), uint32(offset), nameBytes);
+    centralDirectory.push(centralHeader);
+    offset += localHeader.length + contentBytes.length;
+  });
+  const centralOffset = offset;
+  const centralBytes = concatBytes(...centralDirectory);
+  const endRecord = concatBytes(uint32(0x06054b50), uint16(0), uint16(0), uint16(files.length), uint16(files.length), uint32(centralBytes.length), uint32(centralOffset), uint16(0));
+  return new Blob([...chunks, centralBytes, endRecord], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+function utf8Bytes(value) {
+  return new TextEncoder().encode(value);
+}
+
+function uint16(value) {
+  return new Uint8Array([value & 0xff, (value >> 8) & 0xff]);
+}
+
+function uint32(value) {
+  return new Uint8Array([value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff]);
+}
+
+function concatBytes(...arrays) {
+  const totalLength = arrays.reduce((sum, array) => sum + array.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  arrays.forEach((array) => {
+    result.set(array, offset);
+    offset += array.length;
+  });
+  return result;
+}
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i += 1) {
+    let c = i;
+    for (let j = 0; j < 8; j += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 els.projectSelect.addEventListener("change", () => {
   renderQuestionnaire();
   clearRecommendation();
@@ -997,7 +1199,7 @@ els.calculateBtn.addEventListener("click", async () => {
     els.calculateBtn.textContent = originalLabel;
   }
 });
-els.exportPdfBtn.addEventListener("click", () => window.print());
+els.exportXlsxBtn.addEventListener("click", exportRecommendationXlsx);
 
 els.addProjectBtn.addEventListener("click", () => {
   state.projectTypes.push({
