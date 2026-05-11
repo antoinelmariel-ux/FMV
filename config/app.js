@@ -1,4 +1,4 @@
-const APP_VERSION = "1.22.16";
+const APP_VERSION = "1.22.17";
 const PROJECT_CONFIG_FILE = "config/project-config.json";
 let undoSnapshot = null;
 let adminUnlocked = false;
@@ -407,6 +407,7 @@ function computeRecommendation() {
         <thead><tr><th>Total recommandé</th><th>Min total</th><th>Max total</th></tr></thead>
         <tbody>${totalRows || `<tr><td>—</td><td>${round1(globalMin)} h</td><td>${round1(globalMax)} h</td></tr>`}</tbody>
       </table>
+      <p class="report-warning">Soyez vigilants au nombre d’heures car au-dessus de 2000€, nous passons en régime d’autorisation</p>
     </div>`;
 }
 
