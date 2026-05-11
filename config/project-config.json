@@ -1,5 +1,5 @@
 {
-  "version": "1.22.16",
+  "version": "1.22.17",
   "projectTypes": [
     {
       "id": "project-symposium",
@@ -25,7 +25,7 @@
       "participants": [
         {
           "id": "participant-speaker",
-          "label": "Orateur",
+          "label": "Orateur(s)",
           "value": "participant-speaker"
         },
         {
@@ -35,7 +35,7 @@
         },
         {
           "id": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9",
-          "label": "Orateur et modérateur",
+          "label": "Orateur(s) et modérateur",
           "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
         }
       ],
@@ -47,7 +47,7 @@
           "key": "complexity",
           "options": [
             {
-              "label": "Réutilisation de slides avec adaptation mineures",
+              "label": "Réutilisation de slides avec adaptations mineures",
               "value": "Standard"
             },
             {
@@ -67,7 +67,7 @@
               "value": "Oui"
             },
             {
-              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur(s)",
               "value": "Oui_orateur_moderateur"
             },
             {
@@ -348,7 +348,7 @@
       "participants": [
         {
           "id": "fb9876cd-2459-48bd-b1f2-1a62ddbe9724",
-          "label": "Orateur",
+          "label": "Orateur(s)",
           "value": "participant-speaker"
         },
         {
@@ -358,7 +358,7 @@
         },
         {
           "id": "df300a16-8538-4fca-bfad-e17ffea47bd5",
-          "label": "Orateur et modérateur",
+          "label": "Orateur(s) et modérateur",
           "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
         }
       ],
@@ -370,7 +370,7 @@
           "key": "complexity",
           "options": [
             {
-              "label": "Réutilisation de slides avec adaptation mineures",
+              "label": "Réutilisation de slides avec adaptations mineures",
               "value": "Standard"
             },
             {
@@ -390,7 +390,7 @@
               "value": "Oui"
             },
             {
-              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur(s)",
               "value": "Oui_orateur_moderateur"
             },
             {
@@ -459,11 +459,11 @@
           "key": "q_1777894165083",
           "options": [
             {
-              "label": "D'un sympo classique",
+              "label": "Sympo sans filage",
               "value": "choix_1"
             },
             {
-              "label": "D'un sympo \"complexe\" (multiplicité des intervenants, timings serrés, utilisation d'outils techniques, ...)",
+              "label": "Sympo avec filage car (multiplicité des intervenants, timings serrés, utilisation d'outils techniques, …)",
               "value": "choix_2"
             }
           ]
@@ -779,7 +779,7 @@
       "participants": [
         {
           "id": "2ae37f0d-13e7-47ce-b949-5205cbb1e920",
-          "label": "Orateur",
+          "label": "Orateur(s)",
           "value": "participant-speaker"
         },
         {
@@ -789,7 +789,7 @@
         },
         {
           "id": "7c242979-a529-4adf-8771-7b11b5f49364",
-          "label": "Orateur et modérateur",
+          "label": "Orateur(s) et modérateur",
           "value": "b5dd1385-f7c2-4564-b9c1-a6abda4830a9"
         }
       ],
@@ -801,7 +801,7 @@
           "key": "complexity",
           "options": [
             {
-              "label": "Réutilisation de slides avec adaptation mineures",
+              "label": "Réutilisation de slides avec adaptations mineures",
               "value": "Standard"
             },
             {
@@ -821,7 +821,7 @@
               "value": "Oui"
             },
             {
-              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur",
+              "label": "Oui, un expert qui jouera le rôle de modérateur ET d'orateur(s)",
               "value": "Oui_orateur_moderateur"
             },
             {

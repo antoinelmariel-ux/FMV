@@ -232,6 +232,10 @@ input,select,textarea {
   padding: 8px;
 }
 .report-grid .stage-title { margin-top: 14px; color: #2f6fec; }
+.report-warning {
+  color: #b45309;
+  font-weight: 600;
+}
 footer {
   margin-top: 18px;
   display: flex;
