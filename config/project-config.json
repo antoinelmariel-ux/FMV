@@ -41,6 +41,14 @@
       ],
       "questions": [
         {
+          "id": "57659ad2-90f7-41d6-9f5f-925f19e84d70",
+          "label": "Quelle est la durée de la présentation prévue pour un orateur ? (en minutes)",
+          "type": "number",
+          "key": "q_1778569206535",
+          "max": 90,
+          "min": 0
+        },
+        {
           "id": "question-complexity",
           "label": "Effort de préparation",
           "type": "select",
@@ -306,6 +314,22 @@
           "expectedValues": [
             "choix_3"
           ]
+        },
+        {
+          "id": "f4b2760d-0a74-4f24-82cd-002871b8e765",
+          "questionKey": "q_1778569206535",
+          "operator": "<=",
+          "expectedValue": 15,
+          "scope": "global",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "stage-slides",
+          "targetParticipantIds": [],
+          "note": "La présentation par orateur étant courte, tenant en compte pour les temps alloués notamment aux phases préparatoires",
+          "participantIds": [],
+          "expectedValues": [
+            "15"
+          ]
         }
       ]
     },
@@ -363,6 +387,14 @@
         }
       ],
       "questions": [
+        {
+          "id": "752ed2ce-444c-4402-8b8a-aa5a4df03097",
+          "label": "Quelle est la durée de la présentation prévue pour un orateur ? (en minutes)",
+          "type": "number",
+          "key": "q_1778569266457",
+          "max": 90,
+          "min": 0
+        },
         {
           "id": "8856c602-46e3-4bac-a23c-fc923f546fa8",
           "label": "Effort de préparation",
@@ -422,7 +454,7 @@
         },
         {
           "id": "1017e14d-9190-4535-bb03-2cd4cc902262",
-          "label": "A priori, un cycle de revu des slides est-il prévu ?",
+          "label": "A priori, un cycle de revue des slides est-il prévu ?",
           "type": "select",
           "key": "q_1777889856445",
           "options": [
@@ -463,7 +495,7 @@
               "value": "choix_1"
             },
             {
-              "label": "Sympo avec filage car (multiplicité des intervenants, timings serrés, utilisation d'outils techniques, …)",
+              "label": "Sympo avec filage car multiplicité des intervenants, timings serrés, utilisation d'outils techniques, …",
               "value": "choix_2"
             }
           ]
@@ -742,6 +774,22 @@
           "expectedValues": [
             "choix_2"
           ]
+        },
+        {
+          "id": "813696b0-b347-4b67-a75e-523e30641843",
+          "questionKey": "q_1778569266457",
+          "operator": "<=",
+          "expectedValue": 15,
+          "scope": "global",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "75a78e60-0123-4816-b50a-8de4ba91ce7d",
+          "targetParticipantIds": [],
+          "note": "La présentation par orateur étant courte, tenant en compte pour les temps alloués notamment aux phases préparatoires",
+          "participantIds": [],
+          "expectedValues": [
+            "15"
+          ]
         }
       ]
     },
@@ -794,6 +842,14 @@
         }
       ],
       "questions": [
+        {
+          "id": "ab4699ff-334d-46f5-b7c3-a7f7b7739afa",
+          "label": "Quelle est la durée de la présentation prévue pour un orateur ? (en minutes)",
+          "type": "number",
+          "key": "q_1778569338411",
+          "max": 90,
+          "min": 0
+        },
         {
           "id": "77cdb2be-e7d1-47a4-af52-ca6c9f12df97",
           "label": "Effort de préparation",
@@ -853,7 +909,7 @@
         },
         {
           "id": "27648781-cae0-4528-9d20-2103f9afc81c",
-          "label": "A priori, un cycle de revu des slides est-il prévu ?",
+          "label": "A priori, un cycle de revue des slides est-il prévu ?",
           "type": "select",
           "key": "q_1777889856445",
           "options": [
@@ -1124,6 +1180,22 @@
           "participantIds": [],
           "expectedValues": [
             "choix_2"
+          ]
+        },
+        {
+          "id": "042d7158-2a19-46e5-90f7-7c3d5bfa36a7",
+          "questionKey": "q_1778569338411",
+          "operator": "<=",
+          "expectedValue": 15,
+          "scope": "global",
+          "effect": "commentStage",
+          "multiplier": 1.1,
+          "stageId": "57989b33-7d44-4e44-8e06-7c3e10f493b5",
+          "targetParticipantIds": [],
+          "note": "La présentation par orateur étant courte, tenant en compte pour les temps alloués notamment aux phases préparatoires",
+          "participantIds": [],
+          "expectedValues": [
+            "15"
           ]
         }
       ]
