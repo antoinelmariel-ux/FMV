@@ -325,7 +325,7 @@
           "multiplier": 1.1,
           "stageId": "stage-slides",
           "targetParticipantIds": [],
-          "note": "La présentation par orateur étant courte, tenant en compte pour les temps alloués notamment aux phases préparatoires",
+          "note": "La temps de présentation par orateur étant courte, tenez en compte pour les temps alloués (notamment aux phases préparatoires)",
           "participantIds": [],
           "expectedValues": [
             "15"
@@ -785,7 +785,7 @@
           "multiplier": 1.1,
           "stageId": "75a78e60-0123-4816-b50a-8de4ba91ce7d",
           "targetParticipantIds": [],
-          "note": "La présentation par orateur étant courte, tenant en compte pour les temps alloués notamment aux phases préparatoires",
+          "note": "La temps de présentation par orateur étant courte, tenez en compte pour les temps alloués (notamment aux phases préparatoires)",
           "participantIds": [],
           "expectedValues": [
             "15"
@@ -1192,7 +1192,7 @@
           "multiplier": 1.1,
           "stageId": "57989b33-7d44-4e44-8e06-7c3e10f493b5",
           "targetParticipantIds": [],
-          "note": "La présentation par orateur étant courte, tenant en compte pour les temps alloués notamment aux phases préparatoires",
+          "note": "La temps de présentation par orateur étant courte, tenez en compte pour les temps alloués (notamment aux phases préparatoires)",
           "participantIds": [],
           "expectedValues": [
             "15"
